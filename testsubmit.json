@@ -1,0 +1,39 @@
+{ 
+  "resourceType":"Bundle", 
+  "type":"batch", 
+  "entry": [ 
+    {
+      "resource": {
+        "resourceType": "QuestionnaireResponse",
+        "id": "1",
+        "item": []
+      },
+      "request": {
+        "method": "POST",
+        "url": "$generateHealthCertificate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "QuestionnaireResponse",
+        "id": "2",
+        "item": []
+      },
+      "request": {
+        "method": "POST",
+        "url": "$generateHealthCertificate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "QuestionnaireResponse",
+        "id": "3",
+        "item": []
+      },
+      "request": {
+        "method": "POST",
+        "url": "QuestionnaireResponse"
+      }
+    }
+  ]
+}

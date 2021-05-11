@@ -1,0 +1,34 @@
+{
+  "urn": "urn:mediator:who-int-svc-mediator",
+  "version": "0.0.1",
+  "name": "WHO SVC Transactions Mediator",
+  "description": "WHO SVC Transactions Mediator",
+  "defaultChannelConfig": [
+    {
+      "name": "WHO SVC Transactions Route",
+      "urlPattern": "^/svc/",
+      "routes": [
+        {
+          "name": "SVC Endpoint",
+          "host": "localhost",
+          "port": "4321",
+          "primary": true,
+          "type": "http"
+        }
+      ],
+      "allow": ["test"],
+      "methods": ["GET"],
+      "type": "http"
+    }
+  ],
+  "endpoints": [
+    {
+      "name": "WHO SVC Transactions Endpoint",
+      "host": "localhost",
+      "path": "/svc/",
+      "port": "4321",
+      "primary": true,
+      "type": "http"
+    }
+  ]
+}
