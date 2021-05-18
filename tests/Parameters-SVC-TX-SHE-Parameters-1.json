@@ -1,0 +1,101 @@
+{
+  "resourceType": "Parameters",
+  "id": "SVC-TX-SHE-Parameters-1",
+  "parameter": [
+    {
+      "name": "response",
+      "resource": {
+        "resourceType": "QuestionnaireResponse",
+        "id": "SVC-TX-SHE-QuestionnaireResponse-1",
+        "meta": {
+          "profile": [
+            "https://who-int.github.io/svc/refs/heads/rc2/StructureDefinition/svc-questionnaireresponse"
+          ]
+        },
+        "questionnaire": "http://who-int.github.io/svc/refs/heads/rc2/SVC-Questionnaire",
+        "status": "completed",
+        "subject": {
+          "reference": "SVC_Patient_Example"
+        },
+        "authored": "2021-04-01",
+        "item": [
+          {
+            "linkId": "version",
+            "answer": [
+              {
+                "valueString": "RC-2-draft"
+              }
+            ]
+          },
+          {
+            "linkId": "name",
+            "answer": [
+              {
+                "valueString": "Felix Cat"
+              }
+            ]
+          },
+          {
+            "linkId": "birthDate",
+            "answer": [
+              {
+                "valueDate": "2003-03-03"
+              }
+            ]
+          },
+          {
+            "linkId": "vaccinecode",
+            "answer": [
+              {
+                "valueCoding": {
+                  "code": "XM1NL1",
+                  "system": "http://id.who.int/icd11/mms"
+                }
+              }
+            ]
+          },
+          {
+            "linkId": "lot",
+            "answer": [
+              {
+                "valueString": "ER8732"
+              }
+            ]
+          },
+          {
+            "linkId": "expiry",
+            "answer": [
+              {
+                "valueDate": "2021-06-30"
+              }
+            ]
+          },
+          {
+            "linkId": "paperid",
+            "answer": [
+              {
+                "valueString": "bMlJkAt0V92RYhhG3fNt"
+              }
+            ]
+          },
+          {
+            "linkId": "pha",
+            "answer": [
+              {
+                "valueString": "dPD2PfwzBQyphcjeUiAdRP"
+              }
+            ]
+          },
+          {
+            "linkId": "hw",
+            "answer": [
+              {
+                "valueString": "dPD2PfwzBQyphcjeUiAdRP"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
