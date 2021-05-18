@@ -4,6 +4,9 @@ const { v4: uuidv4 } = require('uuid')
 const cbor = require('cbor')
 const base45 = require('base45')
 const qrcode = require('qrcode')
+const fetch = require('node-fetch')
+
+const FHIR = "http://localhost:8080/fhir/"
 
 let urn
 
@@ -44,7 +47,6 @@ export const buildHealthCertificate = (
 ) => {
   return new Promise( (resolve) => {
 
-    console.log(SHCParameters)
     if ( SHCParameters.resourceType !== "Parameters" || !SHCParameters.parameter ) {
       resolve( {
         resourceType: "OperationOutcome",
@@ -98,7 +100,6 @@ export const buildHealthCertificate = (
         answers[linkId] = item.answer[0].valueString
       }
     }
-    console.log(answers)
     if ( answers.version !== "RC-2-draft" ) {
       resolve( {
         resourceType: "OperationOutcome",
@@ -338,7 +339,47 @@ export const buildHealthCertificate = (
   }
   */
 
-      resolve( addBundle )
+      fetch( FHIR, {
+        method: 'POST',
+        body: JSON.stringify( addBundle ),
+        headers: { 'Content-Type': 'application/fhir+json' }
+      } )
+        .then( res => res.json() ).then( json => {
+        // Hacky for now, but Composition was 4th, so the return 
+        // will be, too.
+        let compRegexp = /^Composition\/([^\/]+)\/_history\/([^\/]+)$/
+        let [ compLoc, compID, compVers ] = json.entry[3].response.location.match( compRegexp )
+        fetch( FHIR + "Composition/" + compID + "/$document" )
+        .then( res => res.json() ).then( json => {
+          resolve( json )
+        } )
+        .catch( err => {
+          resolve( {
+            resourceType: "OperationOutcome",
+            issue: [
+              {
+                severity: "error",
+                code: "exception",
+                diagnostics: err.message
+              }
+            ]
+          } )
+        } )
+      } )
+        .catch( err => {
+        resolve( {
+          resourceType: "OperationOutcome",
+          issue: [
+            {
+              severity: "error",
+              code: "exception",
+              diagnostics: err.message
+            }
+          ]
+        } )
+      } )
+
+      //resolve( addBundle )
     } ).catch( err => {
       resolve( {
         resourceType: "OperationOutcome",
