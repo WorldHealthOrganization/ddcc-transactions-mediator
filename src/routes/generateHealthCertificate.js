@@ -1,17 +1,22 @@
 'use strict'
 
 import logger from '../logger'
-import {buildHealthCertificate, buildReturnObject} from './utils'
+import {buildHealthCertificate, buildReturnObject, buildErrorObject} from './utils'
 
-module.exports = (_req, res) => {
+module.exports = async (_req, res) => {
   logger.info('Generate Health Certificate Endpoint Triggered')
 
-  let returnParameters = buildHealthCertificate( _req.body )
+  let Document = await buildHealthCertificate( _req.body )
+  let returnObject
 
-  const returnObject = buildReturnObject(
-    'Successful',
-    200,
-    returnParameters
-  )
+  if ( Document.resourceType !== "Bundle" ) {
+    returnObject = buildErrorObject( Document )
+  } else {
+    returnObject = buildReturnObject(
+      'Successful',
+      200,
+      Document
+    )
+  }
   return res.send(returnObject)
 }

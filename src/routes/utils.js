@@ -1,5 +1,10 @@
 'use strict'
 
+const { v4: uuidv4 } = require('uuid')
+const cbor = require('cbor')
+const base45 = require('base45')
+const qrcode = require('qrcode')
+
 let urn
 
 export const setMediatorUrn = mediatorUrn => {
@@ -35,8 +40,278 @@ export const buildErrorObject = (
 }
 
 export const buildHealthCertificate = (
-  SHCQuestionnaireResponse
+  SHCParameters
 ) => {
+  return new Promise( (resolve) => {
+
+    console.log(SHCParameters)
+    if ( SHCParameters.resourceType !== "Parameters" || !SHCParameters.parameter ) {
+      resolve( {
+        resourceType: "OperationOutcome",
+        issue: [
+          {
+            severity: "error",
+            code: "required",
+            diagnostics: "Invalid resource submitted."
+          }
+        ]
+      } ) 
+    }
+    let parameter = SHCParameters.parameter.find( param => param.name === "response" )
+    if ( !parameter || !parameter.resource ) {
+      resolve( {
+        resourceType: "OperationOutcome",
+        issue: [
+          {
+            severity: "error",
+            code: "required",
+            diagnostics: "Unable to find response parameter."
+          }
+        ]
+      } )
+    }
+    let QResponse = parameter.resource
+    if ( QResponse.resourceType !== "QuestionnaireResponse" ) {
+      resolve( {
+        resourceType: "OperationOutcome",
+        issue: [
+          {
+            severity: "error",
+            code: "required",
+            diagnostics: "Invalid response resource."
+          }
+        ]
+      } )
+    }
+
+    let answers = {}
+    let otherTypes = {
+      "birthDate": "Date",
+      "vaccinecode": "Coding",
+      "expiry": "Date"
+    }
+    for( let item of QResponse.item ) {
+      let linkId = item.linkId
+      if ( otherTypes[linkId] ) {
+        answers[linkId] = item.answer[0]["value"+otherTypes[linkId]]
+      } else {
+        answers[linkId] = item.answer[0].valueString
+      }
+    }
+    console.log(answers)
+    if ( answers.version !== "RC-2-draft" ) {
+      resolve( {
+        resourceType: "OperationOutcome",
+        issue: [
+          {
+            severity: "error",
+            code: "required",
+            diagnostics: "Invalid version."
+          }
+        ]
+      } )
+    }
+    let pID = "urn:uuid:" + uuidv4()
+    let iID = "urn:uuid:" + uuidv4()
+    let cID = "urn:uuid:" + uuidv4()
+    let qrID = "urn:uuid:" + uuidv4()
+
+    let QRContent64 = new Buffer(JSON.stringify(QResponse.item)).toString('base64')
+    let QRContentCBOR = cbor.encode(QResponse.item)
+    let QRCBOR45 = base45.encode(QRContentCBOR)
+
+    qrcode.toDataURL( QRCBOR45, { errorCorrectionLevel: 'Q' } ).then( url => {
+
+      let [ header, QRImage ] = url.split(',', 2)
+
+      let now = new Date().toISOString()
+      let addBundle = {
+        resourceType: "Bundle",
+        type: "transaction",
+        entry: [
+          {
+            fullUrl: pID,
+            resource: {
+              resourceType: "Patient",
+              id: pID,
+              name: [
+                {
+                  text: answers.name
+                }
+              ],
+              birthDate: answers.birthDate
+            },
+            request: {
+              method: "POST",
+              url: "Patient"
+            }
+          },
+          {
+            fullUrl: iID,
+            resource: {
+              resourceType: "Immunization",
+              id: iID,
+              identifier: [
+                {
+                  value: iID
+                }
+              ],
+              status: "completed",
+              vaccineCode: {
+                coding: [
+                  answers.vaccinecode
+                ]
+              },
+              lotNumber: answers.lot,
+              expirationDate: answers.expiry,
+              performer: {
+                actor: {
+                  type: "Practitioner",
+                  identifier: {
+                    value: answers.hw
+                  }
+                }
+              },
+              protocolApplied: [
+                {
+                  authority: {
+                    type: "Organization",
+                    identifier: {
+                      value: answers.pha
+                    }
+                  },
+                  doseNumberPositiveInt: 1
+                }
+              ]
+            },
+            request: {
+              method: "POST",
+              url: "Immunization"
+            }
+          },
+          {
+            fullUrl: qrID,
+            resource: {
+              resourceType: "DocumentReference",
+              id: qrID,
+              status: "current",
+              category: {
+                coding: [
+                  {
+                    system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Category-Usage-CodeSystem",
+                    value: "who"
+                  }
+                ]
+              },
+              subject: pID,
+              content: [
+                {
+                  attachment: {
+                    contentType: "image/png",
+                    data: QRImage
+                  },
+                  format: {
+                    system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Format-CodeSystem",
+                    code: "image"
+                  }
+                },
+                {
+                  attachment: {
+                    contentType: "application/json",
+                    data: QRContent64
+                  },
+                  format: {
+                    system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Format-CodeSystem",
+                    code: "serialized"
+                  }
+                },
+              ]
+            },
+            request: {
+              method: "POST",
+              url: "DocumentReference"
+            }
+          },
+          {
+            fullUrl: cID,
+            resource: {
+              resourceType: "Composition",
+              identifier: [
+                {
+                  value: cID
+                }
+              ],
+              type: {
+                coding: [
+                  {
+                    system: "http://loinc.org",
+                    code: "82593-5"
+                  }
+                ]
+              },
+              category: [
+                {
+                  coding: [
+                    {
+                      code: "svc-covid19"
+                    }
+                  ]
+                }
+              ],
+              subject: pID,
+              date: now,
+              author: [
+                {
+                  type: "Organization",
+                  identifier: {
+                    value: answers.pha
+                  }
+                }
+              ],
+              title: "International Certificate of Vaccination or Prophylaxis",
+              section: [
+                {
+                  code: {
+                    coding: [
+                      {
+                        system: "http://loinc.org",
+                        code: "11369-6"
+                      }
+                    ]
+                  },
+                  entry: [
+                    {
+                      reference: iID
+                    }
+                  ]
+                },
+                {
+                  code: {
+                    coding: [
+                      {
+                        system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-SectionCode-CodeSystem",
+                        value: "qrdoc"
+                      }
+                    ]
+                  },
+                  entry: [
+                    {
+                      reference: qrID
+                    }
+                  ]
+                }
+              ]
+            },
+            request: {
+              method: "POST",
+              url: "Composition"
+            }
+          }
+        ]
+      }
+
+
+      /*
   let QRCode = {
     resourceType: "Binary"
   }
@@ -61,6 +336,21 @@ export const buildHealthCertificate = (
       }
     ]
   }
+  */
 
-  return returnParameters
+      resolve( addBundle )
+    } ).catch( err => {
+      resolve( {
+        resourceType: "OperationOutcome",
+        issue: [
+          {
+            severity: "error",
+            code: "exception",
+            diagnostics: err.message
+          }
+        ]
+      } )
+    } )
+
+  } )
 }

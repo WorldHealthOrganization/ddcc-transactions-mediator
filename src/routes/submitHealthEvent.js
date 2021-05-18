@@ -4,7 +4,7 @@ import logger from '../logger'
 import {buildHealthCertificate, buildReturnObject, buildErrorObject} from './utils'
 
 
-module.exports = (_req, res) => {
+module.exports = async (_req, res) => {
   logger.info('Submit Health Event Endpoint Triggered')
   let returnBundle = {
     resourceType: "Bundle",
@@ -34,9 +34,9 @@ module.exports = (_req, res) => {
       response: {}
     }
     if ( entry.request.method === "POST" 
-      && entry.request.url === "$generateHealthCertificate"
+      && entry.request.url === "QuestionnaireResponse/$generateHealthCertificate"
     ) {
-      responseEntry.resource = buildHealthCertificate( entry.resource )
+      responseEntry.resource = await buildHealthCertificate( entry.resource )
       responseEntry.response.status = "201"
     } else {
       responseEntry.response.status = "404"
