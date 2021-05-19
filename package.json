@@ -1,7 +1,7 @@
 {
-  "name": "openhim-mediator-bootstrap-production",
+  "name": "openhim-mediator-svc-transactions",
   "version": "0.0.1",
-  "description": "Basic OpenHIM skeleton mediator to create a production ready product",
+  "description": "Basic OpenHIM mediator to implement the SVC transactions",
   "dependencies": {
     "base45": "^3.0.0",
     "cbor": "^7.0.5",
@@ -32,15 +32,14 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix ."
   },
-  "repository": "git@github.com:jembi/openhim-mediator-bootstrap-production.git",
+  "repository": "git@github.com:who-int/svc-transactions-mediator.git",
   "keywords": [
     "openhim",
     "mediator",
     "production"
   ],
-  "author": "Jembi Health Systems NPC",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jembi/openhim-mediator-bootstrap-production/issues"
+    "url": "https://github.com/who-int/svc-transactions-mediator/issues"
   }
 }

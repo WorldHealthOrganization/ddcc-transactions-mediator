@@ -6,8 +6,7 @@ const cbor = require('cbor')
 const base45 = require('base45')
 const qrcode = require('qrcode')
 const fetch = require('node-fetch')
-
-const FHIR = "http://localhost:8080/fhir/"
+import {FHIR_SERVER} from '../config/config'
 
 let urn
 
@@ -342,7 +341,7 @@ export const buildHealthCertificate = (
   }
   */
 
-      fetch( FHIR, {
+      fetch( FHIR_SERVER, {
         method: 'POST',
         body: JSON.stringify( addBundle ),
         headers: { 'Content-Type': 'application/fhir+json' }
@@ -354,7 +353,7 @@ export const buildHealthCertificate = (
         let compRegexp = /^Composition\/([^\/]+)\/_history\/([^\/]+)$/
         let [ compLoc, compID, compVers ] = json.entry[3].response.location.match( compRegexp )
         */
-        fetch( FHIR + "Composition/" + answers.paperid + "/$document" )
+        fetch( FHIR_SERVER + "Composition/" + answers.paperid + "/$document" )
         .then( res => res.json() ).then( json => {
           resolve( json )
         } )

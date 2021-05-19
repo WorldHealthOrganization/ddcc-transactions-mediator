@@ -8,5 +8,8 @@ export const OPENHIM_URL = process.env.OPENHIM_URL || 'https://localhost:8080'
 export const OPENHIM_USERNAME =
   process.env.OPENHIM_USERNAME || 'root@openhim.org'
 export const OPENHIM_PASSWORD =
-  process.env.OPENHIM_PASSWORD || 'openhim-password'
+  process.env.OPENHIM_PASSWORD || 'instant101'
 export const TRUST_SELF_SIGNED = process.env.TRUST_SELF_SIGNED === 'true'
+
+// FHIR server
+export const FHIR_SERVER = process.env.FHIR_SERVER || 'http://localhost:8081/fhir/'
