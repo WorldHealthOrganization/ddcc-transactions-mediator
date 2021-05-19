@@ -1,3 +1,4 @@
+// @strip-block
 'use strict'
 
 import express from 'express'
@@ -15,5 +16,7 @@ app.use('/', routes)
 
 app.listen(SERVER_PORT, () => {
   logger.info(`Server listening on Port ${SERVER_PORT}...`)
-  //openhim.mediatorSetup()
+  /* openhim:start */
+  openhim.mediatorSetup()
+  /* openhim:end */
 })

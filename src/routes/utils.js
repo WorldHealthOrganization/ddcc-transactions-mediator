@@ -1,3 +1,4 @@
+// @strip-block
 'use strict'
 
 const { v4: uuidv4 } = require('uuid')
@@ -22,18 +23,21 @@ export const buildReturnObject = (
   httpResponseStatusCode,
   responseBody
 ) => {
-  const response = {
-    status: httpResponseStatusCode,
-    headers: {'content-type': 'application/json'},
-    body: responseBody,
-    timestamp: new Date()
-  }
-  return {
+  let response = responseBody
+  /* openhim:start */
+  response = {
     'x-mediator-urn': urn,
     status: openhimTransactionStatus,
-    response,
+    response: {
+      status: httpResponseStatusCode,
+      headers: {'content-type': 'application/json'},
+      body: responseBody,
+      timestamp: new Date()
+    },
     properties: {property: 'Primary Route'}
   }
+  /* openhim:end */
+  return response
 }
 
 export const buildErrorObject = (

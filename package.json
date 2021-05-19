@@ -16,6 +16,7 @@
     "@babel/cli": "^7.6.4",
     "@babel/core": "^7.6.4",
     "@babel/preset-env": "^7.6.3",
+    "babel-plugin-transform-strip-block": "^0.0.4",
     "eslint": "^6.6.0",
     "eslint-config-prettier": "^6.5.0",
     "eslint-plugin-import": "^2.18.2",
@@ -25,7 +26,8 @@
     "prettier": "^1.18.2"
   },
   "scripts": {
-    "start": "npm run build && node lib/app.js",
+    "start": "STANDALONE=true npm run build && node lib/app.js",
+    "openhim": "npm run build && node lib/app.js",
     "build": "babel src --out-dir lib",
     "lint": "eslint .",
     "lint:fix": "eslint --fix ."
