@@ -114,7 +114,6 @@ export const buildHealthCertificate = (
     }
     let pID = "urn:uuid:" + uuidv4()
     let iID = "urn:uuid:" + uuidv4()
-    let cID = "urn:uuid:" + uuidv4()
     let qrID = "urn:uuid:" + uuidv4()
 
     let QRContent64 = new Buffer(JSON.stringify(QResponse.item)).toString('base64')
@@ -234,12 +233,12 @@ export const buildHealthCertificate = (
             }
           },
           {
-            fullUrl: cID,
             resource: {
               resourceType: "Composition",
+              id: answers.paperid,
               identifier: [
                 {
-                  value: cID
+                  value: answers.paperid
                 }
               ],
               type: {
@@ -304,8 +303,8 @@ export const buildHealthCertificate = (
               ]
             },
             request: {
-              method: "POST",
-              url: "Composition"
+              method: "PUT",
+              url: "Composition/" + answers.paperid
             }
           }
         ]
@@ -347,9 +346,11 @@ export const buildHealthCertificate = (
         .then( res => res.json() ).then( json => {
         // Hacky for now, but Composition was 4th, so the return 
         // will be, too.
+        /*
         let compRegexp = /^Composition\/([^\/]+)\/_history\/([^\/]+)$/
         let [ compLoc, compID, compVers ] = json.entry[3].response.location.match( compRegexp )
-        fetch( FHIR + "Composition/" + compID + "/$document" )
+        */
+        fetch( FHIR + "Composition/" + answers.paperid + "/$document" )
         .then( res => res.json() ).then( json => {
           resolve( json )
         } )
