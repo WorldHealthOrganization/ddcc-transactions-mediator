@@ -119,7 +119,7 @@ export const buildHealthCertificate = (
     let iID = "urn:uuid:" + uuidv4()
     let qrID = "urn:uuid:" + uuidv4()
 
-    let QRContent64 = new Buffer(JSON.stringify(QResponse.item)).toString('base64')
+    let QRContent64 = Buffer.from(JSON.stringify(QResponse.item)).toString('base64')
     let QRContentCBOR = cbor.encode(QResponse.item)
     let QRCBOR45 = base45.encode(QRContentCBOR)
 
