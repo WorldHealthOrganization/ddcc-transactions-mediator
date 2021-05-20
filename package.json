@@ -10,7 +10,8 @@
     "openhim-mediator-utils": "^0.2.3",
     "pino": "^5.13.5",
     "pino-pretty": "^3.2.2",
-    "qrcode": "^1.4.4"
+    "qrcode": "^1.4.4",
+    "canvas": "^2.8.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.6.4",

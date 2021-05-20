@@ -1,11 +1,14 @@
 // @strip-block
 'use strict'
-
+const canvas = require('canvas')
 const { v4: uuidv4 } = require('uuid')
 const cbor = require('cbor')
 const base45 = require('base45')
 const qrcode = require('qrcode')
 const fetch = require('node-fetch')
+const fs = require('fs')
+
+import logger from '../logger'
 import {FHIR_SERVER} from '../config/config'
 
 let urn
@@ -122,10 +125,19 @@ export const buildHealthCertificate = (
     let QRContent64 = Buffer.from(JSON.stringify(QResponse.item)).toString('base64')
     let QRContentCBOR = cbor.encode(QResponse.item)
     let QRCBOR45 = base45.encode(QRContentCBOR)
+    let canvasElement = canvas.createCanvas(600,800);      
 
-    qrcode.toDataURL( QRCBOR45, { errorCorrectionLevel: 'Q' } ).then( url => {
+    qrcode.toCanvas( canvasElement , QRCBOR45, { errorCorrectionLevel: 'Q' } ).then( canvasElement => {
+      let watermark = 'WHO-SVC: ' + qrID
+      const ctx = canvasElement.getContext('2d')
+      let xoff = Math.floor ( (canvasElement.width - ctx.measureText(watermark).width) / 2)
+      ctx.fillText(watermark, xoff ,10)
+      let [header,QRImage] = canvasElement.toDataURL().split(',')
 
-      let [ header, QRImage ] = url.split(',', 2)
+//      const out = fs.createWriteStream('/tmp/test.png')
+//      canvasElement.createPNGStream().pipe(out)
+//      out.on('finish', () =>  console.log('The PNG file was created.'))
+
 
       let now = new Date().toISOString()
       let addBundle = {
