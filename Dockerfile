@@ -1,9 +1,11 @@
-FROM node:dubnium-alpine
+FROM node:fermium
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 
+
+RUN npm install -g npm
 RUN npm install
 RUN sed -i -r "s/path.skip/path.stop/g" node_modules/babel-plugin-transform-strip-block/dist-node/index.js
 
