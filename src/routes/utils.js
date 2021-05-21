@@ -227,8 +227,8 @@ export const buildHealthCertificate = (
             fullUrl: qrID,
             resource: {
               resourceType: "DocumentReference",
-              id: qrID,
-              status: "current",
+	      id: qrID, 
+      	      status: "current",
               category: {
                 coding: [
                   {
@@ -237,9 +237,13 @@ export const buildHealthCertificate = (
                   }
                 ]
               },
-              subject: pID,
+	      subject: pID,
+	      text : {
+		  div : '<div xmlns="http://www.w3.org/1999/xhtml"><img alt="SVC QR Code" src="#qrcode"/></div>'
+		  status : 'generated'
+	      },
               content: [
-                {
+              {
                   attachment: {
                     contentType: "image/png",
                     data: QRImage
