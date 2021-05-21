@@ -10,7 +10,7 @@ import logger from '../logger'
 
 const routes = express.Router()
 
-routes.get('/svc/getQRCode/:shcid', getQRCode)
+routes.get('/svc/DocumentReference/:shcid/([\$])getQRCode', getQRCode)
 routes.post('/svc/submitHealthEvent', submitHealthEvent)
 routes.post('/svc/generateHealthCertificate', generateHealthCertificate)
 // Add more routes here if needed

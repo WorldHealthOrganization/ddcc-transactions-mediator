@@ -151,13 +151,32 @@ export const buildHealthCertificate = (
       const ctx = canvasElement.getContext('2d')
       let xoff = Math.floor ( (canvasElement.width - ctx.measureText(watermark).width) / 2)
       ctx.fillText(watermark, xoff ,10)
-      let [header,QRImage] = canvasElement.toDataURL().split(',')
+      let dataURL = canvasElement.toDataURL()
+      let [header,QRImage] = dataURL.split(',')
 
 //      const out = fs.createWriteStream('/tmp/test.png')
 //      canvasElement.createPNGStream().pipe(out)
 //      out.on('finish', () =>  console.log('The PNG file was created.'))
 
-
+      let div = '<div xmlns="http://www.w3.org/1999/xhtml">'
+	  + ' <table><tr> '
+	  + '   <td>'
+	  + '       <h4>SHC : SVC Covid 19 (' + answers.version + ') </h4>'
+	  + '       <ul><li>Name: ' + answers.name +'</li>'
+	  + '           <li>Date of Birth: ' + answers.birthDate + '</li>'
+	  + '           <li>SHF ID: ' + answers.paperid + '</li>'
+	  + '           <li>Vaccine Code: ' + answers.vaccinecode.code + '</li>'
+	  + '           <li>Expiration Date: ' + answers.expiry + '</li>'
+	  + '           <li>Health Worker: ' + answers.hw + '</li>'
+	  + '           <li>Public Health Authority: ' + answers.pha + '</li>'
+	  + '           <li>Singature: ' + null + '</li>'
+	  + '       </ul>'
+	  + '   </td><td>'
+	  + '       <img alt="SVC QR Code" src="' + dataURL + '"/>'
+	  + '   </td>'
+	  + ' </tr></table>'
+	  + '</div>'
+	
       let now = new Date().toISOString()
       let addBundle = {
         resourceType: "Bundle",
@@ -239,7 +258,7 @@ export const buildHealthCertificate = (
               },
 	      subject: pID,
 	      text : {
-		  div : '<div xmlns="http://www.w3.org/1999/xhtml"><img alt="SVC QR Code" src="#qrcode"/></div>',
+		  div : div,
 		  status : 'generated'
 	      },
               content: [
