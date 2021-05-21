@@ -1,3 +1,4 @@
+// @strip-block
 'use strict'
 
 import {buildReturnObject,buildErrorObject,retrieveDocumentReference} from './utils'
@@ -26,6 +27,10 @@ module.exports = async (_req, res) => {
 	    image,
     attachment.contentType
 	)
+  res.set('Content-Type', attachment.contentType)
+  /* openhim:start */
+  res.set('Content-Type', 'application/json')
+  /* openhim:end */
     }
     
     return res.send(returnObject)
