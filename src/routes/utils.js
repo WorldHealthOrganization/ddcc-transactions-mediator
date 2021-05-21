@@ -23,7 +23,8 @@ export const setMediatorUrn = mediatorUrn => {
 export const buildReturnObject = (
   openhimTransactionStatus,
   httpResponseStatusCode,
-  responseBody
+  responseBody,
+  responseContentType
 ) => {
   let response = responseBody
   /* openhim:start */
@@ -32,7 +33,7 @@ export const buildReturnObject = (
     status: openhimTransactionStatus,
     response: {
       status: httpResponseStatusCode,
-      headers: {'content-type': 'application/json'},
+      headers: {'content-type': responseContentType || 'application/json'},
       body: responseBody,
       timestamp: new Date()
     },
@@ -56,9 +57,9 @@ export const retrieveDocumentReference  = (shcid) => {
             method: 'GET',
             headers: { 'Content-Type': 'application/fhir+json' }
 	} )
-            .then( res => {
+            .then( res => res.json() ).then( json => {
 		logger.info('Retrieved Document Reference ID=' + shcid)
-		resolve(res)
+		resolve(json)
 	    }).catch( err => {
 		logger.info('Error retrieving Document Reference ID=' + shcid)
 		resolve( {'error': JSON.stringigy(err)})

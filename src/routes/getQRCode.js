@@ -18,13 +18,14 @@ module.exports = async (_req, res) => {
 	logger.info("Processing DocumentReference ID=" + shcid)
 	let attachment = Document.content[0].attachment
 	//attachment really should be obtained via a fhirpath query against a category/type/code (e.g. whp, icao, dgc...)
+  let image = Buffer.from(attachment.data, 'base64')
 	
 	returnObject = buildReturnObject(
 	    'Successful',
 	    '200',
-	    attachment.data
+	    image,
+    attachment.contentType
 	)
-	returnObject.response.headers['content-type'] = attachment.contentType
     }
     
     return res.send(returnObject)
