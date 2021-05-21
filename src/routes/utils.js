@@ -48,6 +48,25 @@ export const buildErrorObject = (
   return buildReturnObject( 'Failed', 401, errorMessage )
 }
 
+export const retrieveDocumentReference  = (shcid) => {
+    logger.info('Retrieving Document Reference ' + shcid)
+    logger.info( FHIR_SERVER + 'DocumentReference/' + shcid )
+    return new Promise( (resolve) => {
+	fetch( FHIR_SERVER + 'DocumentReference/' + shcid , {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/fhir+json' }
+	} )
+            .then( res => {
+		logger.info('Retrieved Document Reference ID=' + shcid)
+		resolve(res)
+	    }).catch( err => {
+		logger.info('Error retrieving Document Reference ID=' + shcid)
+		resolve( {'error': JSON.stringigy(err)})
+	    })
+
+    })
+}
+
 export const buildHealthCertificate = (
   SHCParameters
 ) => {

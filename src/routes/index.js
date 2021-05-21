@@ -3,12 +3,14 @@
 import express from 'express'
 
 import {buildReturnObject} from './utils'
+import getQRCode from './getQRCode'
 import submitHealthEvent from './submitHealthEvent'
 import generateHealthCertificate from './generateHealthCertificate'
 import logger from '../logger'
 
 const routes = express.Router()
 
+routes.get('/svc/getQRCode/:shcid', getQRCode)
 routes.post('/svc/submitHealthEvent', submitHealthEvent)
 routes.post('/svc/generateHealthCertificate', generateHealthCertificate)
 // Add more routes here if needed
