@@ -144,19 +144,39 @@ export const buildHealthCertificate = (
     let QRContent64 = Buffer.from(JSON.stringify(QResponse.item)).toString('base64')
     let QRContentCBOR = cbor.encode(QResponse.item)
     let QRCBOR45 = base45.encode(QRContentCBOR)
-    let canvasElement = canvas.createCanvas(600,800);      
+    let canvasElementQR = canvas.createCanvas(400,400);
+    let watermark = 'WHO-SVC: ' + qrID
+    const ctxQR = canvasElementQR.getContext('2d')
 
-    qrcode.toCanvas( canvasElement , QRCBOR45, { errorCorrectionLevel: 'Q' } ).then( canvasElement => {
-      let watermark = 'WHO-SVC: ' + qrID
-      const ctx = canvasElement.getContext('2d')
-      let xoff = Math.floor ( (canvasElement.width - ctx.measureText(watermark).width) / 2)
-      ctx.fillText(watermark, xoff ,10)
+    qrcode.toCanvas( canvasElementQR , QRCBOR45, { errorCorrectionLevel: 'Q' } ).then( canvasElementQR => {
+	let xoff = Math.max(0,Math.floor ( (canvasElementQR.width - ctxQR.measureText(watermark).width) / 2))
+	let canvasElement = canvas.createCanvas(400 + canvasElementQR.width +40 ,Math.max(150,canvasElementQR.width))
+	const ctx = canvasElement.getContext('2d')
+	
+
+	ctxQR.fillText(watermark, xoff ,10)
+	
+	ctx.fillStyle = 'white'
+	ctx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+	ctx.fillStyle = 'black'
+	ctx.drawImage(canvasElementQR,canvasElementQR.width,0)
+	ctx.fillText('Name: ' + answers.name,0,10)
+	ctx.fillText('Date of Birth: ' + answers.birthDate,0,20)
+	ctx.fillText('SHF ID: ' + answers.paperID,0,30)
+	ctx.fillText('Vaccine Code: ' + answers.vaccinecode.code,0,40)
+	ctx.fillText('Expiration Date: ' + answers.expiry,0,50)
+	ctx.fillText('Health Worker: ' + answers.hw,0,60)
+	ctx.fillText('Public Health Authority: ' + answers.pha,0,70)
+	ctx.fillText('Signature: ' + null,0,80)
+	
       let dataURL = canvasElement.toDataURL()
       let [header,QRImage] = dataURL.split(',')
 
-//      const out = fs.createWriteStream('/tmp/test.png')
-//      canvasElement.createPNGStream().pipe(out)
-//      out.on('finish', () =>  console.log('The PNG file was created.'))
+      let va
+	
+      const out = fs.createWriteStream('/tmp/test.png')
+      canvasElement.createPNGStream().pipe(out)
+      out.on('finish', () =>  console.log('The PNG file was created.'))
 
       let div = '<div xmlns="http://www.w3.org/1999/xhtml">'
 	  + ' <table><tr> '
