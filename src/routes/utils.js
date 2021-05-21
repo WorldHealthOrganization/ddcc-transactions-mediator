@@ -233,7 +233,7 @@ export const buildHealthCertificate = (
                 coding: [
                   {
                     system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Category-Usage-CodeSystem",
-                    value: "who"
+                    code: "who"
                   }
                 ]
               },
@@ -328,7 +328,7 @@ export const buildHealthCertificate = (
                     coding: [
                       {
                         system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-SectionCode-CodeSystem",
-                        value: "qrdoc"
+                        code: "qrdoc"
                       }
                     ]
                   },
