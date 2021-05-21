@@ -239,7 +239,7 @@ export const buildHealthCertificate = (
               },
 	      subject: pID,
 	      text : {
-		  div : '<div xmlns="http://www.w3.org/1999/xhtml"><img alt="SVC QR Code" src="#qrcode"/></div>'
+		  div : '<div xmlns="http://www.w3.org/1999/xhtml"><img alt="SVC QR Code" src="#qrcode"/></div>',
 		  status : 'generated'
 	      },
               content: [
