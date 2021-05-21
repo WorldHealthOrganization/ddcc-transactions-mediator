@@ -173,11 +173,27 @@ export const buildHealthCertificate = (
       let dataURL = canvasElement.toDataURL()
       let [header,QRImage] = dataURL.split(',')
 
-      let va
+      
 	
       const out = fs.createWriteStream('/tmp/test.png')
       canvasElement.createPNGStream().pipe(out)
       out.on('finish', () =>  console.log('The PNG file was created.'))
+
+     let patientDiv = '<div xmlns="http://www.w3.org/1999/xhtml">'
+	 + '       <ul><li>Name: ' + answers.name +'</li>'
+	 + '           <li>Date of Birth: ' + answers.birthDate + '</li>'
+	 + '           <li>SHF ID: ' + answers.paperid + '</li>'
+	 + '       </ul>'
+	 + '</div>'
+
+     let immunizationDiv = '<div xmlns="http://www.w3.org/1999/xhtml">'
+	 + '       <ul><li>Vaccine Code: ' + answers.vaccinecode.code + '</li>'
+	 + '           <li>Expiration Date: ' + answers.expiry + '</li>'
+	 + '           <li>Health Worker: ' + answers.hw + '</li>'
+	 + '           <li>Public Health Authority: ' + answers.pha + '</li>'
+	 + '           <li>SHF ID: ' + answers.paperid + '</li>'
+	 + '       </ul>'
+	 + '</div>'
 
       let div = '<div xmlns="http://www.w3.org/1999/xhtml">'
 	  + ' <table><tr> '
@@ -207,7 +223,11 @@ export const buildHealthCertificate = (
             fullUrl: pID,
             resource: {
               resourceType: "Patient",
-              id: pID,
+	      id: pID,
+	      text : {
+		  div : patientDiv,
+		  status : 'generated'
+	      },		
               name: [
                 {
                   text: answers.name
@@ -230,6 +250,10 @@ export const buildHealthCertificate = (
                   value: iID
                 }
               ],
+	      text : {
+		  div : immunizationDiv,
+		  status : 'generated'
+	      },		
               status: "completed",
               vaccineCode: {
                 coding: [
@@ -319,6 +343,10 @@ export const buildHealthCertificate = (
                   value: answers.paperid
                 }
               ],
+	      text : {
+		  div : div,
+		  status : 'generated'
+	      },
               type: {
                 coding: [
                   {
