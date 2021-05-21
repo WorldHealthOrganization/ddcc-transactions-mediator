@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svc-transactions
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: svc-transactions
+  template:
+    metadata:
+      labels:
+        app: svc-transactions
+    spec:
+      containers:
+      - name: svc-transactions
+        image: docker.io/lukeaduncan/svc-transactions:v1.0.2
+        ports:
+        - containerPort: 4321
+          name: svc
+        env:
+        - name: FHIR_SERVER
+          value: "http://hapi-fhir-server-service:8080/fhir/"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-transactions
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 4321
+    targetPort: 4321
+  selector:
+    app: svc-transactions
