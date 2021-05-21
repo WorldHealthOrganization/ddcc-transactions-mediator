@@ -62,7 +62,7 @@ export const retrieveDocumentReference  = (shcid) => {
 		resolve(json)
 	    }).catch( err => {
 		logger.info('Error retrieving Document Reference ID=' + shcid)
-		resolve( {'error': JSON.stringigy(err)})
+		resolve( {'error': JSON.stringify(err)})
 	    })
 
     })
