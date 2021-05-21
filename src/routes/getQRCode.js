@@ -27,7 +27,9 @@ module.exports = async (_req, res) => {
 	    image,
     attachment.contentType
 	)
-  res.set('Content-Type', attachment.contentType)
+	res.set('Content-Type', attachment.contentType)
+	  res.set('Content-Disposition', 'inline; filename=QRCode_' + shcid + '.png');
+
   /* openhim:start */
   res.set('Content-Type', 'application/json')
   /* openhim:end */
