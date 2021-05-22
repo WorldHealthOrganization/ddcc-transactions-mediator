@@ -1,6 +1,8 @@
 // @strip-block
 'use strict'
 const canvas = require('canvas')
+const handlebars = require("handlebars")
+const nodeHtmlToImage = require('node-html-to-image')
 const { v4: uuidv4 } = require('uuid')
 const cbor = require('cbor')
 const base45 = require('base45')
@@ -12,6 +14,17 @@ import logger from '../logger'
 import {FHIR_SERVER} from '../config/config'
 
 let urn
+
+let fullHtml = "<h4>SHC : SVC Covid 19 ({{version}})</h4><table><tr><td><ul>    <li>Name: {{name}}</li>    <li>Date of Birth: {{birthDate}}</li>    <li>Vaccine Code: {{vaccinecode.code}} </li>    <li>Expiration Date: {{expiry}}</li>    <li>Health Worker: {{hw}} </li>    <li>Public Health Authority: {{pha}}</li>    <li>SHF ID: {{paperid}}</li>    <li>Singature: {{signature}}</li>   </ul>  </td><td>   <img alt='SVC QR Code' src='{{dataURL}}'/>  </td> </tr></table>"
+let textHtml = '<h4>SHC : SVC Covid 19 ({{version}})</h4><ul>  <li>Name: {{name}}</li>  <li>Date of Birth: {{birthDate}}</li>  <li>Vaccine Code: {{vaccinecode.code}} </li>  <li>Expiration Date: {{expiry}}</li>  <li>Health Worker: {{hw}} </li>  <li>Public Health Authority: {{pha}}</li>  <li>SHF ID: {{paperid}}</li>  <li>Singature: {{signature}}</li> </ul>'
+let patientHtml = '<ul> <li>Name: {{name}}</li> <li>Date of Birth: {{birthDate}}</li> <li>SHF ID: {{paperid}}</li></ul>'
+let immunizationHtml = '<ul>  <li>Vaccine Code: {{vaccinecode.code}} </li>  <li>Expiration Date: {{expiry}}</li>  <li>Health Worker: {{hw}} </li>  <li>Public Health Authority: {{pha}}</li>  <li>SHF ID: {{paperid}}</li></ul>'
+
+let fullTemplate = handlebars.compile(fullHtml)
+let textTemplate = handlebars.compile(textHtml)
+let patientTemplate = handlebars.compile(patientHtml)
+let immunizationTemplate = handlebars.compile(immunizationHtml)
+
 
 export const setMediatorUrn = mediatorUrn => {
   urn = mediatorUrn
@@ -41,6 +54,22 @@ export const buildReturnObject = (
   }
   /* openhim:end */
   return response
+}
+
+
+
+
+function renderHtmlToImage(options) {
+    logger.info('Rendering ' + JSON.stringify(options))
+    return nodeHtmlToImage({
+	html:'<html><head><style>' + (options.css || '') + '</style><style>body{'
+	    + ' width:' + (options.width || 400)
+	    + ' height:' + (options.height || 400)
+	    + '}</style></head><body>' + options.html 
+    }).then( res => {
+	logger('Resolving render')
+	resolve( res)
+    })    
 }
 
 export const buildErrorObject = (
@@ -146,73 +175,40 @@ export const buildHealthCertificate = (
     let QRContentCBOR = cbor.encode(QResponse.item)
     let QRCBOR45 = base45.encode(QRContentCBOR)
     let canvasElementQR = canvas.createCanvas(400,400);
-    let watermark = 'WHO-SVC: ' + qrID
     const ctxQR = canvasElementQR.getContext('2d')
+    let watermark = 'WHO-SVC: ' + qrID
 
     qrcode.toCanvas( canvasElementQR , QRCBOR45, { errorCorrectionLevel: 'Q' } ).then( canvasElementQR => {
 	let xoff = Math.max(0,Math.floor ( (canvasElementQR.width - ctxQR.measureText(watermark).width) / 2))
-	let canvasElement = canvas.createCanvas(400 + canvasElementQR.width +40 ,Math.max(150,canvasElementQR.width))
-	const ctx = canvasElement.getContext('2d')
-	
-
 	ctxQR.fillText(watermark, xoff ,10)
-	
+		
+	answers['dataURL'] = canvasElementQR.toDataURL()
+	let [header,QRImage] = answers['dataURL'].split(',')
+		
+	let fullDiv = '<div xmlns="http://www.w3.org/1999/xhtml">' + fullTemplate(answers) + '</div>'
+	let textDiv = '<div xmlns="http://www.w3.org/1999/xhtml">' + textTemplate(answers) + '</div>'
+	let patientDiv = '<div xmlns="http://www.w3.org/1999/xhtml">' + patientTemplate(answers) + '</div>'
+	let immunizationDiv = '<div xmlns="http://www.w3.org/1999/xhtml">' + immunizationTemplate(answers) + '</div>'
+
+	logger.info('a0' )
+	let options = {width:400,height:400,html:textDiv}
+ 	let textDivImage =  renderHtmlToImage(options)
+     	
+	let canvasElement = canvas.createCanvas(
+	    options.width + canvasElementQR.width +40 ,
+	    Math.max(options.height,canvasElementQR.height))
+	const ctx = canvasElement.getContext('2d')
+	logger.info('a2')
 	ctx.fillStyle = 'white'
 	ctx.fillRect(0, 0, canvasElement.width, canvasElement.height);
-	ctx.fillStyle = 'black'
-	ctx.drawImage(canvasElementQR,canvasElementQR.width,0)
-	ctx.fillText('Name: ' + answers.name,0,10)
-	ctx.fillText('Date of Birth: ' + answers.birthDate,0,20)
-	ctx.fillText('SHF ID: ' + answers.paperID,0,30)
-	ctx.fillText('Vaccine Code: ' + answers.vaccinecode.code,0,40)
-	ctx.fillText('Expiration Date: ' + answers.expiry,0,50)
-	ctx.fillText('Health Worker: ' + answers.hw,0,60)
-	ctx.fillText('Public Health Authority: ' + answers.pha,0,70)
-	ctx.fillText('Signature: ' + null,0,80)
-	
-      let dataURL = canvasElement.toDataURL()
-      let [header,QRImage] = dataURL.split(',')
+	ctx.drawImage(canvasElementQR,options.width + 20,0)
+	logger.info('a3.0' + textDivImage) //why is textDivImage a promise still?
 
-      
-	
-      const out = fs.createWriteStream('/tmp/test.png')
-      canvasElement.createPNGStream().pipe(out)
-      out.on('finish', () =>  console.log('The PNG file was created.'))
+	ctx.drawImage(textDivImage,10,0) 
+	logger.info('a4')
 
-     let patientDiv = '<div xmlns="http://www.w3.org/1999/xhtml">'
-	 + '       <ul><li>Name: ' + answers.name +'</li>'
-	 + '           <li>Date of Birth: ' + answers.birthDate + '</li>'
-	 + '           <li>SHF ID: ' + answers.paperid + '</li>'
-	 + '       </ul>'
-	 + '</div>'
 
-     let immunizationDiv = '<div xmlns="http://www.w3.org/1999/xhtml">'
-	 + '       <ul><li>Vaccine Code: ' + answers.vaccinecode.code + '</li>'
-	 + '           <li>Expiration Date: ' + answers.expiry + '</li>'
-	 + '           <li>Health Worker: ' + answers.hw + '</li>'
-	 + '           <li>Public Health Authority: ' + answers.pha + '</li>'
-	 + '           <li>SHF ID: ' + answers.paperid + '</li>'
-	 + '       </ul>'
-	 + '</div>'
 
-      let div = '<div xmlns="http://www.w3.org/1999/xhtml">'
-	  + ' <table><tr> '
-	  + '   <td>'
-	  + '       <h4>SHC : SVC Covid 19 (' + answers.version + ') </h4>'
-	  + '       <ul><li>Name: ' + answers.name +'</li>'
-	  + '           <li>Date of Birth: ' + answers.birthDate + '</li>'
-	  + '           <li>SHF ID: ' + answers.paperid + '</li>'
-	  + '           <li>Vaccine Code: ' + answers.vaccinecode.code + '</li>'
-	  + '           <li>Expiration Date: ' + answers.expiry + '</li>'
-	  + '           <li>Health Worker: ' + answers.hw + '</li>'
-	  + '           <li>Public Health Authority: ' + answers.pha + '</li>'
-	  + '           <li>Singature: ' + null + '</li>'
-	  + '       </ul>'
-	  + '   </td><td>'
-	  + '       <img alt="SVC QR Code" src="' + dataURL + '"/>'
-	  + '   </td>'
-	  + ' </tr></table>'
-	  + '</div>'
 	
       let now = new Date().toISOString()
       let addBundle = {
@@ -303,7 +299,7 @@ export const buildHealthCertificate = (
               },
 	      subject: pID,
 	      text : {
-		  div : div,
+		  div : fullDiv,
 		  status : 'generated'
 	      },
               content: [
@@ -344,7 +340,7 @@ export const buildHealthCertificate = (
                 }
               ],
 	      text : {
-		  div : div,
+		  div : fullDiv,
 		  status : 'generated'
 	      },
               type: {
