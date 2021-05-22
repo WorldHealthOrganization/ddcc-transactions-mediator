@@ -309,13 +309,6 @@ function createRegistationEntryImmunization(options) {
 
 
 
-function generateWHOQR(canvasElement,options) {
-    const ctx = canvasElement.getContext('2d')
-    let watermark = 'WHO-SVC: ' + options.ids.DocumentRefence
-    let xoff = Math.max(0,Math.floor ( (canvasElement.width - ctx.measureText(watermark).width) / 2))
-    ctx.fillText(watermark, xoff ,10)
-}
-
 
 function processAttachments(options) {
     let images = {}
@@ -447,6 +440,11 @@ export const buildHealthCertificate = (
 
       qrcode.toCanvas( canvasElementQR , QRCBOR45, { errorCorrectionLevel: 'Q' } ).then(
 	  canvasElementQR => {
+	      const ctx = canvasElementQR.getContext('2d')
+	      let watermark = 'WHO-SVC: ' + options.ids.DocumentReference //this is the shc id
+	      let xoff = Math.max(0,Math.floor ( (canvasElementQR.width - ctx.measureText(watermark).width) / 2))
+	      ctx.fillText(watermark, xoff ,10)
+
              options.dataURLs = {
                  'QR' : canvasElementQR.toDataURL()
              }
