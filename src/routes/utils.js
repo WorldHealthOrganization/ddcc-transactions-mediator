@@ -167,9 +167,9 @@ export const buildHealthCertificate = (
         ]
       } )
     }
-    let pID = "urn:uuid:" + uuidv4()
-    let iID = "urn:uuid:" + uuidv4()
-    let qrID = "urn:uuid:" + uuidv4()
+    let pID = uuidv4()
+    let iID = uuidv4()
+    let qrID = uuidv4()
 
     let QRContent64 = Buffer.from(JSON.stringify(QResponse.item)).toString('base64')
     let QRContentCBOR = cbor.encode(QResponse.item)
@@ -216,7 +216,7 @@ export const buildHealthCertificate = (
         type: "transaction",
         entry: [
           {
-            fullUrl: pID,
+            fullUrl: "urn:uuid:"+pID,
             resource: {
               resourceType: "Patient",
 	      id: pID,
@@ -237,13 +237,13 @@ export const buildHealthCertificate = (
             }
           },
           {
-            fullUrl: iID,
+            fullUrl: "urn:uuid:"+iID,
             resource: {
               resourceType: "Immunization",
               id: iID,
               identifier: [
                 {
-                  value: iID
+                  value: "urn:uuid:"+iID
                 }
               ],
 	      text : {
@@ -284,7 +284,7 @@ export const buildHealthCertificate = (
             }
           },
           {
-            fullUrl: qrID,
+            fullUrl: "urn:uuid:"+qrID,
             resource: {
               resourceType: "DocumentReference",
 	      id: qrID, 
@@ -297,7 +297,7 @@ export const buildHealthCertificate = (
                   }
                 ]
               },
-	      subject: pID,
+              subject: "urn:uuid:"+pID,
 	      text : {
 		  div : fullDiv,
 		  status : 'generated'
@@ -360,7 +360,7 @@ export const buildHealthCertificate = (
                   ]
                 }
               ],
-              subject: pID,
+              subject: "urn:uuid:"+pID,
               date: now,
               author: [
                 {
@@ -383,7 +383,7 @@ export const buildHealthCertificate = (
                   },
                   entry: [
                     {
-                      reference: iID
+                      reference: "urn:uuid:"+iID
                     }
                   ]
                 },
@@ -398,7 +398,7 @@ export const buildHealthCertificate = (
                   },
                   entry: [
                     {
-                      reference: qrID
+                      reference: "urn:uuid:"+qrID
                     }
                   ]
                 }
