@@ -19,12 +19,20 @@ let urn
 function initializeSVCOptions() {
     //divs: mustache template should be defined for each resource in the bundle being sent to the SHC Service Registey
     let divs = {
-	    Composition : "<h4>SHC : SVC Covid 19 ({{version}})</h4><table><tr><td><ul>    <li>Name: {{name}}</li>    <li>Date of Birth: {{birthDate}}</li>    <li>Vaccine Code: {{vaccinecode.code}} </li>    <li>Expiration Date: {{expiry}}</li>    <li>Health Worker: {{hw}} </li>    <li>Public Health Authority: {{pha}}</li>    <li>SHF ID: {{paperid}}</li>    <li>Singature: {{signature}}</li>   </ul>  </td><td>   <img alt='SVC QR Code' src='{{dataURL}}'/>  </td> </tr></table>",
-	    DocumentReference : '<h4>SHC : SVC Covid 19 ({{version}})</h4><ul>  <li>Name: {{name}}</li>  <li>Date of Birth: {{birthDate}}</li>  <li>Vaccine Code: {{vaccinecode.code}} </li>  <li>Expiration Date: {{expiry}}</li>  <li>Health Worker: {{hw}} </li>  <li>Public Health Authority: {{pha}}</li>  <li>SHF ID: {{paperid}}</li>  <li>Singature: {{signature}}</li> </ul>',
-	    Patient : '<ul> <li>Name: {{name}}</li> <li>Date of Birth: {{birthDate}}</li> <li>SHF ID: {{paperid}}</li></ul>',
-	    Immunization : '<ul>  <li>Vaccine Code: {{vaccinecode.code}} </li>  <li>Expiration Date: {{expiry}}</li>  <li>Health Worker: {{hw}} </li>  <li>Public Health Authority: {{pha}}</li>  <li>SHF ID: {{paperid}}</li></ul>'
+	    Composition : "<h4>SHC : SVC Covid 19 ({{version}})</h4><table><tr><td><ul>    <li>Name: {{responses.name}}</li>    <li>Date of Birth: {{responses.birthDate}}</li>    <li>Vaccine Code: {{responses.vaccinecode.code}} </li>    <li>Expiration Date: {{responses.expiry}}</li>    <li>Health Worker: {{responses.hw}} </li>    <li>Public Health Authority: {{responses.pha}}</li>    <li>SHF ID: {{responses.shfid}}</li>    <li>Singature: {{responses.signature}}</li>   </ul>  </td><td>   <img alt='SVC QR Code' src='{{responses.dataURLs.QR}}'/>  </td> </tr></table>",
+	    DocumentReference : '<h4>SHC : SVC Covid 19 ({{version}})</h4><ul>  <li>Name: {{responses.name}}</li>  <li>Date of Birth: {{responses.birthDate}}</li>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>SHF ID: {{responses.shfid}}</li>  <li>Singature: {{signatures.QR}}</li> </ul>',
+	    Patient : '<ul> <li>Name: {{responses.name}}</li> <li>Date of Birth: {{responses.birthDate}}</li> <li>SHF ID: {{responses.shfid}}</li></ul>',
+	    Immunization : '<ul>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>SHF ID: {{responses.shfid}}</li></ul>'
     }
-    return initializeOptions(divs)
+    let options = initializeOptions(divs)
+    options.version = "RC-2-draft"
+    options.responseTypes =  {
+	"birthDate": "Date",
+	"vaccinecode": "Coding",
+	"expiry": "Date"
+    }
+
+    return
 }
 
 function initializeOptions(divs) {
@@ -62,8 +70,6 @@ function processSVCBundle(options) {
 }
 
     
-
-
 export const setMediatorUrn = mediatorUrn => {
   urn = mediatorUrn
 }
@@ -97,16 +103,16 @@ export const buildReturnObject = (
 
 
 
-function renderHtmlToImage(options) {
+function renderHtmlToImage(imgoptions) {
     logger.info('Rendering ' + JSON.stringify(options))
     return nodeHtmlToImage({
-	html:'<html><head><style>' + (options.css || '') + '</style><style>body{'
-	    + ' width:' + (options.width || 400)
-	    + ' height:' + (options.height || 400)
-	    + '}</style></head><body>' + options.html 
-    }).then( res => {
+	html:'<html><head><style>' + (imgoptions.css || '') + '</style><style>body{'
+	    + ' width:' + (imgoptions.width || 400)
+	    + ' height:' + (imgoptions.height || 400)
+	    + '}</style></head><body>' + imgoptions.html 
+    }).then( image  => {
 	logger('Resolving render')
-	resolve( res)
+	resolve( image)
     })    
 }
 
@@ -331,24 +337,20 @@ function processDivs(options) {
 }
 
 
-function processResponses(QResponse) {
+function processResponses(QResponse,options) {
     let responses = {}
-    let otherTypes = {
-	"birthDate": "Date",
-	"vaccinecode": "Coding",
-	"expiry": "Date"
-    }
 
     for( let item of QResponse.item ) {
 	let linkId = item.linkId
-	if ( otherTypes[linkId] ) {
-	    responses[linkId] = item.answer[0]["value"+otherTypes[linkId]]
+	if ( options.responseTypes[linkId] ) {
+	    responses[linkId] = item.answer[0]["value"+options.responseTypes[linkId]]
 	} else {
             responses[linkId] = item.answer[0].valueString
 	}
     }
     return responses
 }
+
 
 
 //one needs to be defined for each questtonnaire handled
@@ -420,9 +422,9 @@ export const buildHealthCertificate = (
       }
  
       let options = QResponseInitializers[QResponse.questionnaire]()
-      options.responses = processResponses(QResponse)
+      options.responses = processResponses(QResponse,options)
 
-      if ( options.responses.version !== "RC-2-draft" ) {
+      if ( options.responses.version !== options.version ) {
 	  resolve( {
               resourceType: "OperationOutcome",
               issue: [
@@ -434,30 +436,27 @@ export const buildHealthCertificate = (
               ]
 	  } )
       }
-
+      
       //Need to verify that this is what we want to stringify. (for discussion)
       options.content64['QR'] = Buffer.from(JSON.stringify(QResponse.item)).toString('base64') 
-
+    
+      //in future should have all the QR codes generated (e.g. DGC, ICAO)
       let canvasElementQR = canvas.createCanvas(400,400);
       let QRContentCBOR = cbor.encode(QResponse.item)
       let QRCBOR45 = base45.encode(QRContentCBOR)
 
-      
       qrcode.toCanvas( canvasElementQR , QRCBOR45, { errorCorrectionLevel: 'Q' } ).then(
 	  canvasElementQR => {
+             options.dataURLs = {
+                 'QR' : canvasElementQR.toDataURL()
+             }
 
-	      //in future should have all the QR codes generated (e.g. DGC, ICAO)
-	      //would need to 
-	      options.dataURLs = {
-		  'QR' : canvasElementQR.toDataURL()
-	      }
-	      
-	      options.images = processAttachments(options)
-	      options.divs = processDivs(options) 	     
-	      
-	      logger.info('a0' )
-	      let options = {width:400,height:400,html:options.divs.text}
- 	      let textDivImage =  renderHtmlToImage(options)
+             options.images = processAttachments(options)
+             options.divs = processDivs(options)
+
+             logger.info('a0' )
+	      let imgoptions = {width:400,height:400,html:options.divs.DocumentReference}
+	      let textDivImage =  renderHtmlToImage(imgoptions)
 
 	      //really we should be doing this at the end after we processed all QR codes generated
 	      //what is getting attached here is the representation of the SHC
@@ -516,7 +515,7 @@ export const buildHealthCertificate = (
 			let compRegexp = /^Composition\/([^\/]+)\/_history\/([^\/]+)$/
 			let [ compLoc, compID, compVers ] = json.entry[3].response.location.match( compRegexp )
 		      */
-		      fetch( FHIR_SERVER + "Composition/" + options.responses.paperid + "/$document" )
+		      fetch( FHIR_SERVER + "Composition/" + options.responses.shfid + "/$document" )
 			  .then( res => res.json() ).then( json => {
 			      resolve( json )
 			  } )
