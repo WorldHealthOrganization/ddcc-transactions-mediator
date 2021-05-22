@@ -17,43 +17,42 @@ let urn
 
 
 function initializeSVCOptions() {
-    //divs: mustache template should be defined for each resource in the bundle being sent to the SHC Service Registey
-    let divs = {
+    let options = {
+	questionnaire : "http://who-int.github.io/svc/refs/heads/rc2/SVC-Questionnaire",
+	version : "RC-2-draft",
+	responseTypes :  { //this should be sourced from the questionnaire
+	    "birthDate": "Date",
+	    "vaccinecode": "Coding",
+	    "expiry": "Date"
+	},
+	divs :	{    //divs: mustache template should be defined for each resource in the bundle being sent to the SHC Service Registey
 	    Composition : "<h4>SHC : SVC Covid 19 ({{version}})</h4><table><tr><td><ul>    <li>Name: {{responses.name}}</li>    <li>Date of Birth: {{responses.birthDate}}</li>    <li>Vaccine Code: {{responses.vaccinecode.code}} </li>    <li>Expiration Date: {{responses.expiry}}</li>    <li>Health Worker: {{responses.hw}} </li>    <li>Public Health Authority: {{responses.pha}}</li>    <li>SHF ID: {{responses.shfid}}</li>    <li>Singature: {{responses.signature}}</li>   </ul>  </td><td>   <img alt='SVC QR Code' src='{{responses.dataURLs.QR}}'/>  </td> </tr></table>",
 	    DocumentReference : '<h4>SHC : SVC Covid 19 ({{version}})</h4><ul>  <li>Name: {{responses.name}}</li>  <li>Date of Birth: {{responses.birthDate}}</li>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>SHF ID: {{responses.shfid}}</li>  <li>Singature: {{signatures.QR}}</li> </ul>',
 	    Patient : '<ul> <li>Name: {{responses.name}}</li> <li>Date of Birth: {{responses.birthDate}}</li> <li>SHF ID: {{responses.shfid}}</li></ul>',
 	    Immunization : '<ul>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>SHF ID: {{responses.shfid}}</li></ul>'
-    }
-    let options = initializeOptions(divs)
-    options.version = "RC-2-draft"
-    options.responseTypes =  {
-	"birthDate": "Date",
-	"vaccinecode": "Coding",
-	"expiry": "Date"
-    }
-
-    return
-}
-
-function initializeOptions(divs) {
-    let options = {
-	divs : divs,
-	templates : {},
+	},
     	responses : {},
 	ids : {},
 	images : {},
 	dataURLs : {},	  
 	content64 : {},
-	now : new Date().toISOString()
     }
-    for ( let [key,div] of Object.entries(options.divs)) {
-	options.ids[key] = uuidv4()
-    }
-    for ( let [key,div] of Object.entries(options.divs)) {
-	options.templates[key] = handlebars.compile(div)
-    }
+    options.templates = initializeTemplates(options)
+    options.now = new Date().toISOString()
 
     return options
+}
+
+function initializeTemplates(options) {
+    let templates = {}
+    for ( let [key,div] of Object.entries(options.divs)) {
+	templates[key] = uuidv4()
+    }
+    for ( let [key,div] of Object.entries(options.divs)) {
+	templates[key] = handlebars.compile(div)
+    }
+
+    return templates
 }
 
 function processSVCBundle(options) {
@@ -104,7 +103,7 @@ export const buildReturnObject = (
 
 
 function renderHtmlToImage(imgoptions) {
-    logger.info('Rendering ' + JSON.stringify(options))
+    logger.info('Rendering ' + JSON.stringify(imgoptions))
     return nodeHtmlToImage({
 	html:'<html><head><style>' + (imgoptions.css || '') + '</style><style>body{'
 	    + ' width:' + (imgoptions.width || 400)
@@ -440,10 +439,10 @@ export const buildHealthCertificate = (
 
       qrcode.toCanvas( canvasElementQR , QRCBOR45, { errorCorrectionLevel: 'Q' } ).then(
 	  canvasElementQR => {
-	      const ctx = canvasElementQR.getContext('2d')
+	      const ctxQR = canvasElementQR.getContext('2d')
 	      let watermark = 'WHO-SVC: ' + options.ids.DocumentReference //this is the shc id
-	      let xoff = Math.max(0,Math.floor ( (canvasElementQR.width - ctx.measureText(watermark).width) / 2))
-	      ctx.fillText(watermark, xoff ,10)
+	      let xoff = Math.max(0,Math.floor ( (canvasElementQR.width - ctxQR.measureText(watermark).width) / 2))
+	      ctxQR.fillText(watermark, xoff ,10)
 
               options.dataURLs = {
                   'QR' : canvasElementQR.toDataURL()
