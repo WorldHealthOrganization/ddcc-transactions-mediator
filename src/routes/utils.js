@@ -15,19 +15,52 @@ import {FHIR_SERVER} from '../config/config'
 
 let urn
 
-//mustache template should be defined for each resource in the bundle being sent to the SHC Service Registey
-let divs = {
-    Composition : "<h4>SHC : SVC Covid 19 ({{version}})</h4><table><tr><td><ul>    <li>Name: {{name}}</li>    <li>Date of Birth: {{birthDate}}</li>    <li>Vaccine Code: {{vaccinecode.code}} </li>    <li>Expiration Date: {{expiry}}</li>    <li>Health Worker: {{hw}} </li>    <li>Public Health Authority: {{pha}}</li>    <li>SHF ID: {{paperid}}</li>    <li>Singature: {{signature}}</li>   </ul>  </td><td>   <img alt='SVC QR Code' src='{{dataURL}}'/>  </td> </tr></table>",
-    DocumentReference : '<h4>SHC : SVC Covid 19 ({{version}})</h4><ul>  <li>Name: {{name}}</li>  <li>Date of Birth: {{birthDate}}</li>  <li>Vaccine Code: {{vaccinecode.code}} </li>  <li>Expiration Date: {{expiry}}</li>  <li>Health Worker: {{hw}} </li>  <li>Public Health Authority: {{pha}}</li>  <li>SHF ID: {{paperid}}</li>  <li>Singature: {{signature}}</li> </ul>',
-    Patient : '<ul> <li>Name: {{name}}</li> <li>Date of Birth: {{birthDate}}</li> <li>SHF ID: {{paperid}}</li></ul>',
-    Immunization : '<ul>  <li>Vaccine Code: {{vaccinecode.code}} </li>  <li>Expiration Date: {{expiry}}</li>  <li>Health Worker: {{hw}} </li>  <li>Public Health Authority: {{pha}}</li>  <li>SHF ID: {{paperid}}</li></ul>'
+
+function initializeSVCOptions() {
+    //divs: mustache template should be defined for each resource in the bundle being sent to the SHC Service Registey
+    let divs = {
+	    Composition : "<h4>SHC : SVC Covid 19 ({{version}})</h4><table><tr><td><ul>    <li>Name: {{name}}</li>    <li>Date of Birth: {{birthDate}}</li>    <li>Vaccine Code: {{vaccinecode.code}} </li>    <li>Expiration Date: {{expiry}}</li>    <li>Health Worker: {{hw}} </li>    <li>Public Health Authority: {{pha}}</li>    <li>SHF ID: {{paperid}}</li>    <li>Singature: {{signature}}</li>   </ul>  </td><td>   <img alt='SVC QR Code' src='{{dataURL}}'/>  </td> </tr></table>",
+	    DocumentReference : '<h4>SHC : SVC Covid 19 ({{version}})</h4><ul>  <li>Name: {{name}}</li>  <li>Date of Birth: {{birthDate}}</li>  <li>Vaccine Code: {{vaccinecode.code}} </li>  <li>Expiration Date: {{expiry}}</li>  <li>Health Worker: {{hw}} </li>  <li>Public Health Authority: {{pha}}</li>  <li>SHF ID: {{paperid}}</li>  <li>Singature: {{signature}}</li> </ul>',
+	    Patient : '<ul> <li>Name: {{name}}</li> <li>Date of Birth: {{birthDate}}</li> <li>SHF ID: {{paperid}}</li></ul>',
+	    Immunization : '<ul>  <li>Vaccine Code: {{vaccinecode.code}} </li>  <li>Expiration Date: {{expiry}}</li>  <li>Health Worker: {{hw}} </li>  <li>Public Health Authority: {{pha}}</li>  <li>SHF ID: {{paperid}}</li></ul>'
+    }
+    return initializeOptions(divs)
 }
 
+function initializeOptions(divs) {
+    let options = {
+	divs : divs,
+	templates : {},
+    	responses : {},
+	ids : {},
+	images : {},
+	dataURLs : {},	  
+	content64 : {},
+	now : new Date().toISOString()
+    }
+    for ( let [key,div] of Object.entries(options.divs)) {
+	options.ids[key] = uuidv4()
+    }
+    for ( let [key,div] of Object.entries(options.divs)) {
+	options.templates[key] = handlebars.compile(div)
+    }
 
-let templates = {}
-for ( let [key,div] of Object.entries(divs)) {
-    templates[key] = handlebars.compile(div)
+    return options
 }
+
+function processSVCBundle(options) {
+    return {
+	resourceType: "Bundle",	
+	type: "transaction",
+	entry: [
+	    createRegistationEntryPatient(options),
+	    createRegistationEntryImmunization(options),
+	    createRegistationEntryDocumentReference(options),
+	    createRegistationEntryComposition(options)
+	]
+    }    
+}
+
     
 
 
@@ -104,27 +137,27 @@ export const retrieveDocumentReference  = (shcid) => {
 
 
 
-function createRegistrationBundleEntry(answers,resourceType) {
+function createRegistrationEntry(options,resourceType) {
     return {
-	fullUrl: "urn:uuid:"+answers.ids[resourceType],
+	fullUrl: "urn:uuid:"+options.ids[resourceType],
 	resource: {
 	    resourceType: resourceType,
-	    id: answers.ids[resourceType],
+	    id: options.ids[resourceType],
 	    text: {
-		div : answers.divs[resourceType],
+		div : options.divs[resourceType],
 		status : 'generated'
 	    },
-	    date: answers.now
+	    date: options.now
 	},
 	request: {
 	    method: "PUT",				
-	    url: resourceType + "/" + answers.ids[resourceType]
+	    url: resourceType + "/" + options.ids[resourceType]
 	}
     }
 }
     
-function createRegistrationBundleCompostion(answers) {
-    let entry = createRegistryBundleEntry(answers,'Composition')
+function createRegistationEntryCompostion(options) {
+    let entry = createRegistrationEntry(options,'Composition')
     entry.resource.type =  {
 	coding: [
 	    {
@@ -142,12 +175,12 @@ function createRegistrationBundleCompostion(answers) {
 	    ]
 	}
     ]
-    entry.resource.subject =  "urn:uuid:"+answers.ids.Patient
+    entry.resource.subject =  "urn:uuid:"+options.ids.Patient
     entry.resource.author =  [
 	{
 	    type: "Organization",
 	    identifier: {
-		value: answers.responses.pha
+		value: options.responses.pha
 	    }
 	}
     ]
@@ -164,7 +197,7 @@ function createRegistrationBundleCompostion(answers) {
 	    },
 	    entry: [
 		{
-		    reference: "urn:uuid:"+answers.ids.Immunization
+		    reference: "urn:uuid:"+options.ids.Immunization
 		}
 	    ]
 	},
@@ -179,7 +212,7 @@ function createRegistrationBundleCompostion(answers) {
 	    },
 	    entry: [
 		{
-		    reference: "urn:uuid:"+answers.ids.DocumentReference
+		    reference: "urn:uuid:"+options.ids.DocumentReference
 		}
 	    ]
 	}
@@ -188,8 +221,8 @@ function createRegistrationBundleCompostion(answers) {
 
 }
 
-function createRegistrationBundleDocumentReference(answers) {
-    let entry = createRegistryBundleEntry(answers,'DocumentReference')
+function createRegistationEntryDocumentReference(options) {
+    let entry = createRegistrationEntry(options,'DocumentReference')
     entry.resource.status = "current"
     entry.resource.category = {
 	coding: [
@@ -199,12 +232,12 @@ function createRegistrationBundleDocumentReference(answers) {
 	    }
 	]
     }
-    entry.resource.subject =  "urn:uuid:"+answers.ids.Patient
+    entry.resource.subject =  "urn:uuid:"+options.ids.Patient
     entry.resource.content = [
 	{
 	    attachment: {
 		contentType: "image/png",
-		data: answers.images.QR
+		data: options.images.QR
 	    },
 	    format: {
 		system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Format-CodeSystem",
@@ -214,7 +247,7 @@ function createRegistrationBundleDocumentReference(answers) {
 	{
 	    attachment: {
 		contentType: "application/json",
-		data: answers.content64.QR
+		data: options.content64.QR
 	    },
 	    format: {
 		system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Format-CodeSystem",
@@ -225,32 +258,32 @@ function createRegistrationBundleDocumentReference(answers) {
     return entry
 }
 
-function createRegistrationBundlePatient(answers) {
-    let entry = createRegistryBundleEntry(answers,'Patient')
+function createRegistationEntryPatient(options) {
+    let entry = createRegistrationEntry(options,'Patient')
     entry.resource.name = [
 	{
-	    text: answers.responses.name
+	    text: options.responses.name
 	}
     ]
-    entry.resource.birthDate =answers.responses.birthDate
+    entry.resource.birthDate =options.responses.birthDate
     return entry
 }
 
-function createRegistrationBundleImmunization(answers) {
-    let entry = createRegistryBundleEntry(answers,'Immunization')
+function createRegistationEntryImmunization(options) {
+    let entry = createRegistrationEntry(options,'Immunization')
     entry.resource.status = "completed"
     entry.resource.vaccineCode = {
 	coding: [
-	    answers.responses.vaccinecode
+	    options.responses.vaccinecode
 	]
     },
-    entry.resource.lotNumber =  answers.responses.lot
-    entry.resource.expirationDate = answers.responses.expiry
+    entry.resource.lotNumber =  options.responses.lot
+    entry.resource.expirationDate = options.responses.expiry
     entry.resource.performer =  {
 	actor: {
 	    type: "Practitioner",
 	    identifier: {
-		value: answers.responses.hw
+		value: options.responses.hw
 	    }
 	}
     },
@@ -259,7 +292,7 @@ function createRegistrationBundleImmunization(answers) {
 	    authority: {
 		type: "Organization",
 		identifier: {
-		    value: answers.responses.pha
+		    value: options.responses.pha
 		}
 	    },
 	    doseNumberPositiveInt: 1
@@ -267,43 +300,31 @@ function createRegistrationBundleImmunization(answers) {
     ]
 }
 
-function createRegistrationBundle(answers) {
-    return {
-	resourceType: "Bundle",	
-	type: "transaction",
-	entry: [
-	    createRegistrationBundlePatient(),
-	    createRegistrationBundleImmunization(),
-	    createRegistrationBundleDocumentReference(),
-	    createRegistrationBundleComposition()
-	    ]
-    }
-}
 
 
 
-function generateWHOQR(canvasElement,answers) {
+function generateWHOQR(canvasElement,options) {
     const ctx = canvasElement.getContext('2d')
-    let watermark = 'WHO-SVC: ' + answers.ids.DocumentRefence
+    let watermark = 'WHO-SVC: ' + options.ids.DocumentRefence
     let xoff = Math.max(0,Math.floor ( (canvasElement.width - ctx.measureText(watermark).width) / 2))
     ctx.fillText(watermark, xoff ,10)
 }
 
 
-function processAttachments(answers) {
+function processAttachments(options) {
     let images = {}
-    for (let[key,dataURL] of Object.entries(answers.dataURLs)) {
+    for (let[key,dataURL] of Object.entries(options.dataURLs)) {
 	let [header,image] = dataURL.split(',')
 	images[key] = image
     }
     return images
 }
 
-function processDivs(answers) {
+function processDivs(options) {
     let divs = {} 
-    for (let [key,template] of Object.entries(templates )) {
+    for (let [key,template] of Object.entries(options.templates )) {
 	divs[key] = '<div xmlns="http://www.w3.org/1999/xhtml">'
-	    + template(answers)
+	    + template(options)
 	    + '</div>'
     }
     return divs
@@ -328,6 +349,16 @@ function processResponses(QResponse) {
     }
     return responses
 }
+
+
+//one needs to be defined for each questtonnaire handled
+let QResponseInitializers = {
+    "http://who-int.github.io/svc/refs/heads/rc2/SVC-Questionnaire":initializeSVCOptions
+}
+let QResponseProcessors = {
+    "http://who-int.github.io/svc/refs/heads/rc2/SVC-Questionnaire":processSVCBundle
+}
+
 
 export const buildHealthCertificate = (
   SHCParameters
@@ -373,20 +404,25 @@ export const buildHealthCertificate = (
 	  } )
       }
 
-      let answers = { 	  			  
-	  responses : {},
-	  ids : {},
-	  divs : {},
-	  images : {},
-	  dataURLs : {},	  
-	  content64 : {},
-	  now : new Date().toISOString()
+
+      if ( ! (QResponse.questionnaire in QResponseProcessors)
+	   || ! (QResponse.questionnaire in QResponseInitializers)) {
+	  resolve( {
+              resourceType: "OperationOutcome",
+              issue: [
+		  {
+		      severity: "error",
+		      code: "required",
+		      diagnostics: "Do not know how to handle " + QResponse.questionniare  
+		  }
+              ]
+	  } )
       }
+ 
+      let options = QResponseInitializers[QResponse.questionnaire]()
+      options.responses = processResponses(QResponse)
 
-
-      answers.responses = processResponses(QResponse)
-
-      if ( answers.responses.version !== "RC-2-draft" ) {
+      if ( options.responses.version !== "RC-2-draft" ) {
 	  resolve( {
               resourceType: "OperationOutcome",
               issue: [
@@ -399,15 +435,8 @@ export const buildHealthCertificate = (
 	  } )
       }
 
-      //needs to be sorted
-      answers.ids.Patient = uuidv4()
-      answers.ids.Immunization = uuidv4()
-      answers.ids.DocumentReference = uuidv4()
-      answers.ids.Compostion = null // we retrieve it at the end 
-
-
       //Need to verify that this is what we want to stringify. (for discussion)
-      answers.content64['QR'] = Buffer.from(JSON.stringify(QResponse.item)).toString('base64') 
+      options.content64['QR'] = Buffer.from(JSON.stringify(QResponse.item)).toString('base64') 
 
       let canvasElementQR = canvas.createCanvas(400,400);
       let QRContentCBOR = cbor.encode(QResponse.item)
@@ -419,15 +448,15 @@ export const buildHealthCertificate = (
 
 	      //in future should have all the QR codes generated (e.g. DGC, ICAO)
 	      //would need to 
-	      answers.dataURLs = {
+	      options.dataURLs = {
 		  'QR' : canvasElementQR.toDataURL()
 	      }
 	      
-	      answers.images = processAttachments(answers)
-	      answers.divs = processDivs(answers) 	     
+	      options.images = processAttachments(options)
+	      options.divs = processDivs(options) 	     
 	      
 	      logger.info('a0' )
-	      let options = {width:400,height:400,html:answers.divs.text}
+	      let options = {width:400,height:400,html:options.divs.text}
  	      let textDivImage =  renderHtmlToImage(options)
 
 	      //really we should be doing this at the end after we processed all QR codes generated
@@ -446,8 +475,7 @@ export const buildHealthCertificate = (
 	      logger.info('a4')
 
 
-	      let addBundle = createRegistrationBundle(answers)
-
+	      let addBundle = QResponseProcessors[QResponse.questionnaire](options)
 
       /*
   let QRCode = {
@@ -488,7 +516,7 @@ export const buildHealthCertificate = (
 			let compRegexp = /^Composition\/([^\/]+)\/_history\/([^\/]+)$/
 			let [ compLoc, compID, compVers ] = json.entry[3].response.location.match( compRegexp )
 		      */
-		      fetch( FHIR_SERVER + "Composition/" + answers.responses.paperid + "/$document" )
+		      fetch( FHIR_SERVER + "Composition/" + options.responses.paperid + "/$document" )
 			  .then( res => res.json() ).then( json => {
 			      resolve( json )
 			  } )
