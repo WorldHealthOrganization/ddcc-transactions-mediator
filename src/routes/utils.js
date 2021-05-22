@@ -432,7 +432,7 @@ export const buildHealthCertificate = (
       
       //Need to verify that this is what we want to stringify. (for discussion)
       options.content64['QR'] = Buffer.from(JSON.stringify(QResponse.item)).toString('base64') 
-    
+      
       //in future should have all the QR codes generated (e.g. DGC, ICAO)
       let canvasElementQR = canvas.createCanvas(400,400);
       let QRContentCBOR = cbor.encode(QResponse.item)
@@ -445,14 +445,14 @@ export const buildHealthCertificate = (
 	      let xoff = Math.max(0,Math.floor ( (canvasElementQR.width - ctx.measureText(watermark).width) / 2))
 	      ctx.fillText(watermark, xoff ,10)
 
-             options.dataURLs = {
-                 'QR' : canvasElementQR.toDataURL()
-             }
+              options.dataURLs = {
+                  'QR' : canvasElementQR.toDataURL()
+              }
 
-             options.images = processAttachments(options)
-             options.divs = processDivs(options)
+              options.images = processAttachments(options)
+              options.divs = processDivs(options)
 
-             logger.info('a0' )
+              logger.info('a0' )
 	      let imgoptions = {width:400,height:400,html:options.divs.DocumentReference}
 	      let textDivImage =  renderHtmlToImage(imgoptions)
 
