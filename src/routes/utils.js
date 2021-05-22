@@ -1,4 +1,4 @@
-// @strip-block
+// @strip-blockc
 'use strict'
 const canvas = require('canvas')
 const handlebars = require("handlebars")
@@ -15,15 +15,20 @@ import {FHIR_SERVER} from '../config/config'
 
 let urn
 
-let fullHtml = "<h4>SHC : SVC Covid 19 ({{version}})</h4><table><tr><td><ul>    <li>Name: {{name}}</li>    <li>Date of Birth: {{birthDate}}</li>    <li>Vaccine Code: {{vaccinecode.code}} </li>    <li>Expiration Date: {{expiry}}</li>    <li>Health Worker: {{hw}} </li>    <li>Public Health Authority: {{pha}}</li>    <li>SHF ID: {{paperid}}</li>    <li>Singature: {{signature}}</li>   </ul>  </td><td>   <img alt='SVC QR Code' src='{{dataURL}}'/>  </td> </tr></table>"
-let textHtml = '<h4>SHC : SVC Covid 19 ({{version}})</h4><ul>  <li>Name: {{name}}</li>  <li>Date of Birth: {{birthDate}}</li>  <li>Vaccine Code: {{vaccinecode.code}} </li>  <li>Expiration Date: {{expiry}}</li>  <li>Health Worker: {{hw}} </li>  <li>Public Health Authority: {{pha}}</li>  <li>SHF ID: {{paperid}}</li>  <li>Singature: {{signature}}</li> </ul>'
-let patientHtml = '<ul> <li>Name: {{name}}</li> <li>Date of Birth: {{birthDate}}</li> <li>SHF ID: {{paperid}}</li></ul>'
-let immunizationHtml = '<ul>  <li>Vaccine Code: {{vaccinecode.code}} </li>  <li>Expiration Date: {{expiry}}</li>  <li>Health Worker: {{hw}} </li>  <li>Public Health Authority: {{pha}}</li>  <li>SHF ID: {{paperid}}</li></ul>'
+//mustache template should be defined for each resource in the bundle being sent to the SHC Service Registey
+let divs = {
+    Composition : "<h4>SHC : SVC Covid 19 ({{version}})</h4><table><tr><td><ul>    <li>Name: {{name}}</li>    <li>Date of Birth: {{birthDate}}</li>    <li>Vaccine Code: {{vaccinecode.code}} </li>    <li>Expiration Date: {{expiry}}</li>    <li>Health Worker: {{hw}} </li>    <li>Public Health Authority: {{pha}}</li>    <li>SHF ID: {{paperid}}</li>    <li>Singature: {{signature}}</li>   </ul>  </td><td>   <img alt='SVC QR Code' src='{{dataURL}}'/>  </td> </tr></table>",
+    DocumentReference : '<h4>SHC : SVC Covid 19 ({{version}})</h4><ul>  <li>Name: {{name}}</li>  <li>Date of Birth: {{birthDate}}</li>  <li>Vaccine Code: {{vaccinecode.code}} </li>  <li>Expiration Date: {{expiry}}</li>  <li>Health Worker: {{hw}} </li>  <li>Public Health Authority: {{pha}}</li>  <li>SHF ID: {{paperid}}</li>  <li>Singature: {{signature}}</li> </ul>',
+    Patient : '<ul> <li>Name: {{name}}</li> <li>Date of Birth: {{birthDate}}</li> <li>SHF ID: {{paperid}}</li></ul>',
+    Immunization : '<ul>  <li>Vaccine Code: {{vaccinecode.code}} </li>  <li>Expiration Date: {{expiry}}</li>  <li>Health Worker: {{hw}} </li>  <li>Public Health Authority: {{pha}}</li>  <li>SHF ID: {{paperid}}</li></ul>'
+}
 
-let fullTemplate = handlebars.compile(fullHtml)
-let textTemplate = handlebars.compile(textHtml)
-let patientTemplate = handlebars.compile(patientHtml)
-let immunizationTemplate = handlebars.compile(immunizationHtml)
+
+let templates = {}
+for ( let [key,div] of Object.entries(divs)) {
+    templates[key] = handlebars.compile(div)
+}
+    
 
 
 export const setMediatorUrn = mediatorUrn => {
@@ -97,320 +102,351 @@ export const retrieveDocumentReference  = (shcid) => {
     })
 }
 
+
+
+function createRegistrationBundleEntry(answers,resourceType) {
+    return {
+	fullUrl: "urn:uuid:"+answers.ids[resourceType],
+	resource: {
+	    resourceType: resourceType,
+	    id: answers.ids[resourceType],
+	    text: {
+		div : answers.divs[resourceType],
+		status : 'generated'
+	    },
+	    date: answers.now
+	},
+	request: {
+	    method: "PUT",				
+	    url: resourceType + "/" + answers.ids[resourceType]
+	}
+    }
+}
+    
+function createRegistrationBundleCompostion(answers) {
+    let entry = createRegistryBundleEntry(answers,'Composition')
+    entry.resource.type =  {
+	coding: [
+	    {
+		system: "http://loinc.org",
+		code: "82593-5"
+	    }
+	]
+    }
+    entry.resource.category =  [
+	{
+	    coding: [
+		{
+		    code: "svc-covid19"
+		}
+	    ]
+	}
+    ]
+    entry.resource.subject =  "urn:uuid:"+answers.ids.Patient
+    entry.resource.author =  [
+	{
+	    type: "Organization",
+	    identifier: {
+		value: answers.responses.pha
+	    }
+	}
+    ]
+    entry.resource.title =  "International Certificate of Vaccination or Prophylaxis"
+    entry.resource.section =  [
+	{
+	    code: {
+		coding: [
+		    {
+			system: "http://loinc.org",
+			code: "11369-6"
+		    }
+		]
+	    },
+	    entry: [
+		{
+		    reference: "urn:uuid:"+answers.ids.Immunization
+		}
+	    ]
+	},
+	{
+	    code: {
+		coding: [
+		    {
+			system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-SectionCode-CodeSystem",
+			code: "qrdoc"
+		    }
+		]
+	    },
+	    entry: [
+		{
+		    reference: "urn:uuid:"+answers.ids.DocumentReference
+		}
+	    ]
+	}
+    ]
+    return entry
+
+}
+
+function createRegistrationBundleDocumentReference(answers) {
+    let entry = createRegistryBundleEntry(answers,'DocumentReference')
+    entry.resource.status = "current"
+    entry.resource.category = {
+	coding: [
+	    {
+		system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Category-Usage-CodeSystem",
+		code: "who"
+	    }
+	]
+    }
+    entry.resource.subject =  "urn:uuid:"+answers.ids.Patient
+    entry.resource.content = [
+	{
+	    attachment: {
+		contentType: "image/png",
+		data: answers.images.QR
+	    },
+	    format: {
+		system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Format-CodeSystem",
+		code: "image"
+	    }
+	},
+	{
+	    attachment: {
+		contentType: "application/json",
+		data: answers.content64.QR
+	    },
+	    format: {
+		system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Format-CodeSystem",
+		code: "serialized"
+	    }
+	},
+    ]
+    return entry
+}
+
+function createRegistrationBundlePatient(answers) {
+    let entry = createRegistryBundleEntry(answers,'Patient')
+    entry.resource.name = [
+	{
+	    text: answers.responses.name
+	}
+    ]
+    entry.resource.birthDate =answers.responses.birthDate
+    return entry
+}
+
+function createRegistrationBundleImmunization(answers) {
+    let entry = createRegistryBundleEntry(answers,'Immunization')
+    entry.resource.status = "completed"
+    entry.resource.vaccineCode = {
+	coding: [
+	    answers.responses.vaccinecode
+	]
+    },
+    entry.resource.lotNumber =  answers.responses.lot
+    entry.resource.expirationDate = answers.responses.expiry
+    entry.resource.performer =  {
+	actor: {
+	    type: "Practitioner",
+	    identifier: {
+		value: answers.responses.hw
+	    }
+	}
+    },
+    entry.resource.protocolApplied = [
+	{
+	    authority: {
+		type: "Organization",
+		identifier: {
+		    value: answers.responses.pha
+		}
+	    },
+	    doseNumberPositiveInt: 1
+	}
+    ]
+}
+
+function createRegistrationBundle(answers) {
+    return {
+	resourceType: "Bundle",	
+	type: "transaction",
+	entry: [
+	    createRegistrationBundlePatient(),
+	    createRegistrationBundleImmunization(),
+	    createRegistrationBundleDocumentReference(),
+	    createRegistrationBundleComposition()
+	    ]
+    }
+}
+
+
+
+function generateWHOQR(canvasElement,answers) {
+    const ctx = canvasElement.getContext('2d')
+    let watermark = 'WHO-SVC: ' + answers.ids.DocumentRefence
+    let xoff = Math.max(0,Math.floor ( (canvasElement.width - ctx.measureText(watermark).width) / 2))
+    ctx.fillText(watermark, xoff ,10)
+}
+
+
+function processAttachments(answers) {
+    let images = {}
+    for (let[key,dataURL] of Object.entries(answers.dataURLs)) {
+	let [header,image] = dataURL.split(',')
+	images[key] = image
+    }
+    return images
+}
+
+function processDivs(answers) {
+    let divs = {} 
+    for (let [key,template] of Object.entries(templates )) {
+	divs[key] = '<div xmlns="http://www.w3.org/1999/xhtml">'
+	    + template(answers)
+	    + '</div>'
+    }
+    return divs
+}
+
+
+function processResponses(QResponse) {
+    let responses = {}
+    let otherTypes = {
+	"birthDate": "Date",
+	"vaccinecode": "Coding",
+	"expiry": "Date"
+    }
+
+    for( let item of QResponse.item ) {
+	let linkId = item.linkId
+	if ( otherTypes[linkId] ) {
+	    responses[linkId] = item.answer[0]["value"+otherTypes[linkId]]
+	} else {
+            responses[linkId] = item.answer[0].valueString
+	}
+    }
+    return responses
+}
+
 export const buildHealthCertificate = (
   SHCParameters
 ) => {
   return new Promise( (resolve) => {
 
-    if ( SHCParameters.resourceType !== "Parameters" || !SHCParameters.parameter ) {
-      resolve( {
-        resourceType: "OperationOutcome",
-        issue: [
-          {
-            severity: "error",
-            code: "required",
-            diagnostics: "Invalid resource submitted."
-          }
-        ]
-      } ) 
-    }
-    let parameter = SHCParameters.parameter.find( param => param.name === "response" )
-    if ( !parameter || !parameter.resource ) {
-      resolve( {
-        resourceType: "OperationOutcome",
-        issue: [
-          {
-            severity: "error",
-            code: "required",
-            diagnostics: "Unable to find response parameter."
-          }
-        ]
-      } )
-    }
-    let QResponse = parameter.resource
-    if ( QResponse.resourceType !== "QuestionnaireResponse" ) {
-      resolve( {
-        resourceType: "OperationOutcome",
-        issue: [
-          {
-            severity: "error",
-            code: "required",
-            diagnostics: "Invalid response resource."
-          }
-        ]
-      } )
-    }
-
-    let answers = {}
-    let otherTypes = {
-      "birthDate": "Date",
-      "vaccinecode": "Coding",
-      "expiry": "Date"
-    }
-    for( let item of QResponse.item ) {
-      let linkId = item.linkId
-      if ( otherTypes[linkId] ) {
-        answers[linkId] = item.answer[0]["value"+otherTypes[linkId]]
-      } else {
-        answers[linkId] = item.answer[0].valueString
+      if ( SHCParameters.resourceType !== "Parameters" || !SHCParameters.parameter ) {
+	  resolve( {
+              resourceType: "OperationOutcome",
+              issue: [
+		  {
+		      severity: "error",
+		      code: "required",
+		      diagnostics: "Invalid resource submitted."
+		  }
+              ]
+	  } ) 
       }
-    }
-    if ( answers.version !== "RC-2-draft" ) {
-      resolve( {
-        resourceType: "OperationOutcome",
-        issue: [
-          {
-            severity: "error",
-            code: "required",
-            diagnostics: "Invalid version."
-          }
-        ]
-      } )
-    }
-    let pID = uuidv4()
-    let iID = uuidv4()
-    let qrID = uuidv4()
-
-    let QRContent64 = Buffer.from(JSON.stringify(QResponse.item)).toString('base64')
-    let QRContentCBOR = cbor.encode(QResponse.item)
-    let QRCBOR45 = base45.encode(QRContentCBOR)
-    let canvasElementQR = canvas.createCanvas(400,400);
-    const ctxQR = canvasElementQR.getContext('2d')
-    let watermark = 'WHO-SVC: ' + qrID
-
-    qrcode.toCanvas( canvasElementQR , QRCBOR45, { errorCorrectionLevel: 'Q' } ).then( canvasElementQR => {
-	let xoff = Math.max(0,Math.floor ( (canvasElementQR.width - ctxQR.measureText(watermark).width) / 2))
-	ctxQR.fillText(watermark, xoff ,10)
-		
-	answers['dataURL'] = canvasElementQR.toDataURL()
-	let [header,QRImage] = answers['dataURL'].split(',')
-		
-	let fullDiv = '<div xmlns="http://www.w3.org/1999/xhtml">' + fullTemplate(answers) + '</div>'
-	let textDiv = '<div xmlns="http://www.w3.org/1999/xhtml">' + textTemplate(answers) + '</div>'
-	let patientDiv = '<div xmlns="http://www.w3.org/1999/xhtml">' + patientTemplate(answers) + '</div>'
-	let immunizationDiv = '<div xmlns="http://www.w3.org/1999/xhtml">' + immunizationTemplate(answers) + '</div>'
-
-	logger.info('a0' )
-	let options = {width:400,height:400,html:textDiv}
- 	let textDivImage =  renderHtmlToImage(options)
-     	
-	let canvasElement = canvas.createCanvas(
-	    options.width + canvasElementQR.width +40 ,
-	    Math.max(options.height,canvasElementQR.height))
-	const ctx = canvasElement.getContext('2d')
-	logger.info('a2')
-	ctx.fillStyle = 'white'
-	ctx.fillRect(0, 0, canvasElement.width, canvasElement.height);
-	ctx.drawImage(canvasElementQR,options.width + 20,0)
-	logger.info('a3.0' + textDivImage) //why is textDivImage a promise still?
-
-	ctx.drawImage(textDivImage,10,0) 
-	logger.info('a4')
-
-
-
-	
-      let now = new Date().toISOString()
-      let addBundle = {
-        resourceType: "Bundle",
-        type: "transaction",
-        entry: [
-          {
-            fullUrl: "urn:uuid:"+pID,
-            resource: {
-              resourceType: "Patient",
-	      id: pID,
-	      text : {
-		  div : patientDiv,
-		  status : 'generated'
-	      },		
-              name: [
-                {
-                  text: answers.name
-                }
-              ],
-              birthDate: answers.birthDate
-            },
-            request: {
-              method: "POST",
-              url: "Patient"
-            }
-          },
-          {
-            fullUrl: "urn:uuid:"+iID,
-            resource: {
-              resourceType: "Immunization",
-              id: iID,
-              identifier: [
-                {
-                  value: "urn:uuid:"+iID
-                }
-              ],
-	      text : {
-		  div : immunizationDiv,
-		  status : 'generated'
-	      },		
-              status: "completed",
-              vaccineCode: {
-                coding: [
-                  answers.vaccinecode
-                ]
-              },
-              lotNumber: answers.lot,
-              expirationDate: answers.expiry,
-              performer: {
-                actor: {
-                  type: "Practitioner",
-                  identifier: {
-                    value: answers.hw
-                  }
-                }
-              },
-              protocolApplied: [
-                {
-                  authority: {
-                    type: "Organization",
-                    identifier: {
-                      value: answers.pha
-                    }
-                  },
-                  doseNumberPositiveInt: 1
-                }
+      let parameter = SHCParameters.parameter.find( param => param.name === "response" )
+      if ( !parameter || !parameter.resource ) {
+	  resolve( {
+              resourceType: "OperationOutcome",
+              issue: [
+		  {
+		      severity: "error",
+		      code: "required",
+		      diagnostics: "Unable to find response parameter."
+		  }
               ]
-            },
-            request: {
-              method: "POST",
-              url: "Immunization"
-            }
-          },
-          {
-            fullUrl: "urn:uuid:"+qrID,
-            resource: {
-              resourceType: "DocumentReference",
-	      id: qrID, 
-      	      status: "current",
-              category: {
-                coding: [
-                  {
-                    system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Category-Usage-CodeSystem",
-                    code: "who"
-                  }
-                ]
-              },
-              subject: "urn:uuid:"+pID,
-	      text : {
-		  div : fullDiv,
-		  status : 'generated'
-	      },
-              content: [
-              {
-                  attachment: {
-                    contentType: "image/png",
-                    data: QRImage
-                  },
-                  format: {
-                    system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Format-CodeSystem",
-                    code: "image"
-                  }
-                },
-                {
-                  attachment: {
-                    contentType: "application/json",
-                    data: QRContent64
-                  },
-                  format: {
-                    system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Format-CodeSystem",
-                    code: "serialized"
-                  }
-                },
-              ]
-            },
-            request: {
-              method: "POST",
-              url: "DocumentReference"
-            }
-          },
-          {
-            resource: {
-              resourceType: "Composition",
-              id: answers.paperid,
-              identifier: [
-                {
-                  value: answers.paperid
-                }
-              ],
-	      text : {
-		  div : fullDiv,
-		  status : 'generated'
-	      },
-              type: {
-                coding: [
-                  {
-                    system: "http://loinc.org",
-                    code: "82593-5"
-                  }
-                ]
-              },
-              category: [
-                {
-                  coding: [
-                    {
-                      code: "svc-covid19"
-                    }
-                  ]
-                }
-              ],
-              subject: "urn:uuid:"+pID,
-              date: now,
-              author: [
-                {
-                  type: "Organization",
-                  identifier: {
-                    value: answers.pha
-                  }
-                }
-              ],
-              title: "International Certificate of Vaccination or Prophylaxis",
-              section: [
-                {
-                  code: {
-                    coding: [
-                      {
-                        system: "http://loinc.org",
-                        code: "11369-6"
-                      }
-                    ]
-                  },
-                  entry: [
-                    {
-                      reference: "urn:uuid:"+iID
-                    }
-                  ]
-                },
-                {
-                  code: {
-                    coding: [
-                      {
-                        system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-SectionCode-CodeSystem",
-                        code: "qrdoc"
-                      }
-                    ]
-                  },
-                  entry: [
-                    {
-                      reference: "urn:uuid:"+qrID
-                    }
-                  ]
-                }
-              ]
-            },
-            request: {
-              method: "PUT",
-              url: "Composition/" + answers.paperid
-            }
-          }
-        ]
+	  } )
       }
+      let QResponse = parameter.resource
+      if ( QResponse.resourceType !== "QuestionnaireResponse" ) {
+	  resolve( {
+              resourceType: "OperationOutcome",
+              issue: [
+		  {
+		      severity: "error",
+		      code: "required",
+		      diagnostics: "Invalid response resource."
+		  }
+              ]
+	  } )
+      }
+
+      let answers = { 	  			  
+	  responses : {},
+	  ids : {},
+	  divs : {},
+	  images : {},
+	  dataURLs : {},	  
+	  content64 : {},
+	  now : new Date().toISOString()
+      }
+
+
+      answers.responses = processResponses(QResponse)
+
+      if ( answers.responses.version !== "RC-2-draft" ) {
+	  resolve( {
+              resourceType: "OperationOutcome",
+              issue: [
+		  {
+		      severity: "error",
+		      code: "required",
+		      diagnostics: "Invalid version."
+		  }
+              ]
+	  } )
+      }
+
+      //needs to be sorted
+      answers.ids.Patient = uuidv4()
+      answers.ids.Immunization = uuidv4()
+      answers.ids.DocumentReference = uuidv4()
+      answers.ids.Compostion = null // we retrieve it at the end 
+
+
+      //Need to verify that this is what we want to stringify. (for discussion)
+      answers.content64['QR'] = Buffer.from(JSON.stringify(QResponse.item)).toString('base64') 
+
+      let canvasElementQR = canvas.createCanvas(400,400);
+      let QRContentCBOR = cbor.encode(QResponse.item)
+      let QRCBOR45 = base45.encode(QRContentCBOR)
+
+      
+      qrcode.toCanvas( canvasElementQR , QRCBOR45, { errorCorrectionLevel: 'Q' } ).then(
+	  canvasElementQR => {
+
+	      //in future should have all the QR codes generated (e.g. DGC, ICAO)
+	      //would need to 
+	      answers.dataURLs = {
+		  'QR' : canvasElementQR.toDataURL()
+	      }
+	      
+	      answers.images = processAttachments(answers)
+	      answers.divs = processDivs(answers) 	     
+	      
+	      logger.info('a0' )
+	      let options = {width:400,height:400,html:answers.divs.text}
+ 	      let textDivImage =  renderHtmlToImage(options)
+
+	      //really we should be doing this at the end after we processed all QR codes generated
+	      //what is getting attached here is the representation of the SHC
+	      //from the the QResps and all of QR codes	      
+	      let canvasElement = canvas.createCanvas(
+		  options.width + canvasElementQR.width +40 ,
+		  Math.max(options.height,canvasElementQR.height))
+	      const ctx = canvasElement.getContext('2d')
+	      logger.info('a2')
+	      ctx.fillStyle = 'white'
+	      ctx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+	      ctx.drawImage(canvasElementQR,options.width + 20,0)
+	      logger.info('a3.0' + textDivImage) //why is textDivImage a promise still?
+	      ctx.drawImage(textDivImage,10,0) 
+	      logger.info('a4')
+
+
+	      let addBundle = createRegistrationBundle(answers)
 
 
       /*
@@ -440,61 +476,61 @@ export const buildHealthCertificate = (
   }
   */
 
-      fetch( FHIR_SERVER, {
-        method: 'POST',
-        body: JSON.stringify( addBundle ),
-        headers: { 'Content-Type': 'application/fhir+json' }
-      } )
-        .then( res => res.json() ).then( json => {
-        // Hacky for now, but Composition was 4th, so the return 
-        // will be, too.
-        /*
-        let compRegexp = /^Composition\/([^\/]+)\/_history\/([^\/]+)$/
-        let [ compLoc, compID, compVers ] = json.entry[3].response.location.match( compRegexp )
-        */
-        fetch( FHIR_SERVER + "Composition/" + answers.paperid + "/$document" )
-        .then( res => res.json() ).then( json => {
-          resolve( json )
-        } )
-        .catch( err => {
-          resolve( {
-            resourceType: "OperationOutcome",
-            issue: [
-              {
-                severity: "error",
-                code: "exception",
-                diagnostics: err.message
-              }
-            ]
-          } )
-        } )
-      } )
-        .catch( err => {
-        resolve( {
-          resourceType: "OperationOutcome",
-          issue: [
-            {
-              severity: "error",
-              code: "exception",
-              diagnostics: err.message
-            }
-          ]
-        } )
-      } )
+	      fetch( FHIR_SERVER, {
+		  method: 'POST',
+		  body: JSON.stringify( addBundle ),
+		  headers: { 'Content-Type': 'application/fhir+json' }
+	      } )
+		  .then( res => res.json() ).then( json => {
+		      // Hacky for now, but Composition was 4th, so the return 
+		      // will be, too.
+		      /*
+			let compRegexp = /^Composition\/([^\/]+)\/_history\/([^\/]+)$/
+			let [ compLoc, compID, compVers ] = json.entry[3].response.location.match( compRegexp )
+		      */
+		      fetch( FHIR_SERVER + "Composition/" + answers.responses.paperid + "/$document" )
+			  .then( res => res.json() ).then( json => {
+			      resolve( json )
+			  } )
+			  .catch( err => {
+			      resolve( {
+				  resourceType: "OperationOutcome",
+				  issue: [
+				      {
+					  severity: "error",
+					  code: "exception",
+					  diagnostics: err.message
+				      }
+				  ]
+			      } )
+			  } )
+		  } )
+		  .catch( err => {
+		      resolve( {
+			  resourceType: "OperationOutcome",
+			  issue: [
+			      {
+				  severity: "error",
+				  code: "exception",
+				  diagnostics: err.message
+			      }
+			  ]
+		      } )
+		  } )
 
-      //resolve( addBundle )
-    } ).catch( err => {
-      resolve( {
-        resourceType: "OperationOutcome",
-        issue: [
-          {
-            severity: "error",
-            code: "exception",
-            diagnostics: err.message
-          }
-        ]
-      } )
-    } )
+          //resolve( addBundle )
+	  } ).catch( err => {
+	      resolve( {
+		  resourceType: "OperationOutcome",
+		  issue: [
+		      {
+			  severity: "error",
+			  code: "exception",
+			  diagnostics: err.message
+		      }
+		  ]
+	      } )
+	  } )
 
   } )
 }
