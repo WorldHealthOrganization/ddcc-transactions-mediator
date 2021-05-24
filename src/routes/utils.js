@@ -60,10 +60,10 @@ function processSVCBundle(options) {
 	resourceType: "Bundle",	
 	type: "transaction",
 	entry: [
-	    createRegistationEntryPatient(options),
-	    createRegistationEntryImmunization(options),
-	    createRegistationEntryDocumentReference(options),
-	    createRegistationEntryComposition(options)
+	    createRegistrationEntryPatient(options),
+	    createRegistrationEntryImmunization(options),
+	    createRegistrationEntryDocumentReference(options),
+	    createRegistrationEntryComposition(options)
 	]
     }    
 }
@@ -109,10 +109,13 @@ function renderHtmlToImage(imgoptions) {
 	    + ' width:' + (imgoptions.width || 400)
 	    + ' height:' + (imgoptions.height || 400)
 	    + '}</style></head><body>' + imgoptions.html 
-    }).then( image  => {
+    })
+  /*
+    .then( image  => {
 	logger('Resolving render')
 	resolve( image)
     })    
+    */
 }
 
 export const buildErrorObject = (
@@ -161,7 +164,7 @@ function createRegistrationEntry(options,resourceType) {
     }
 }
     
-function createRegistationEntryCompostion(options) {
+function createRegistrationEntryComposition(options) {
     let entry = createRegistrationEntry(options,'Composition')
     entry.resource.type =  {
 	coding: [
@@ -226,7 +229,7 @@ function createRegistationEntryCompostion(options) {
 
 }
 
-function createRegistationEntryDocumentReference(options) {
+function createRegistrationEntryDocumentReference(options) {
     let entry = createRegistrationEntry(options,'DocumentReference')
     entry.resource.status = "current"
     entry.resource.category = {
@@ -263,7 +266,7 @@ function createRegistationEntryDocumentReference(options) {
     return entry
 }
 
-function createRegistationEntryPatient(options) {
+function createRegistrationEntryPatient(options) {
     let entry = createRegistrationEntry(options,'Patient')
     entry.resource.name = [
 	{
@@ -274,7 +277,7 @@ function createRegistationEntryPatient(options) {
     return entry
 }
 
-function createRegistationEntryImmunization(options) {
+function createRegistrationEntryImmunization(options) {
     let entry = createRegistrationEntry(options,'Immunization')
     entry.resource.status = "completed"
     entry.resource.vaccineCode = {
@@ -438,7 +441,7 @@ export const buildHealthCertificate = (
       let QRCBOR45 = base45.encode(QRContentCBOR)
 
       qrcode.toCanvas( canvasElementQR , QRCBOR45, { errorCorrectionLevel: 'Q' } ).then(
-	  canvasElementQR => {
+	  async( canvasElementQR ) => {
 	      const ctxQR = canvasElementQR.getContext('2d')
 	      let watermark = 'WHO-SVC: ' + options.ids.DocumentReference //this is the shc id
 	      let xoff = Math.max(0,Math.floor ( (canvasElementQR.width - ctxQR.measureText(watermark).width) / 2))
@@ -451,9 +454,9 @@ export const buildHealthCertificate = (
               options.images = processAttachments(options)
               options.divs = processDivs(options)
 
-              logger.info('a0' )
+              //logger.info('a0' )
 	      let imgoptions = {width:400,height:400,html:options.divs.DocumentReference}
-	      let textDivImage =  renderHtmlToImage(imgoptions)
+	      let textDivImage =  await renderHtmlToImage(imgoptions)
 
 	      //really we should be doing this at the end after we processed all QR codes generated
 	      //what is getting attached here is the representation of the SHC
@@ -466,8 +469,12 @@ export const buildHealthCertificate = (
 	      ctx.fillStyle = 'white'
 	      ctx.fillRect(0, 0, canvasElement.width, canvasElement.height);
 	      ctx.drawImage(canvasElementQR,options.width + 20,0)
-	      logger.info('a3.0' + textDivImage) //why is textDivImage a promise still?
-	      ctx.drawImage(textDivImage,10,0) 
+	      //logger.info('a3.0' + textDivImage) //why is textDivImage a promise still?
+	      //logger.info('a3 ' + JSON.stringify(textDivImage))
+      
+	      //ctx.drawImage(canvas.createImageData(new Uint8ClampedArray(textDivImage),imgoptions.width,imgoptions.height),10,0) 
+	      ctx.putImageData(canvas.createImageData(new Uint8ClampedArray(textDivImage),imgoptions.width,imgoptions.height),10,0) 
+	      //ctx.putImageData(textDivImage,10,0) 
 	      logger.info('a4')
 
 
