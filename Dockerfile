@@ -1,9 +1,16 @@
-FROM node:fermium
+FROM node:fermium-alpine
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 
+RUN apk add --update --no-cache \
+  make \
+  g++ \
+  cairo-dev \
+  jpeg-dev \
+  giflib-dev \
+  pango-dev 
 
 RUN npm install -g npm
 RUN npm install
