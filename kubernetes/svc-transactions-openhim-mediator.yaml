@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svc-transactions
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: svc-transactions
+  template:
+    metadata:
+      labels:
+        app: svc-transactions
+    spec:
+      containers:
+      - name: svc-transactions
+        image: docker.io/lukeaduncan/svc-transactions-openhim:v1.0.9
+        ports:
+        - containerPort: 4321
+          name: svc
+        env:
+        - name: FHIR_SERVER
+          value: http://hapi-fhir-server-service:8080/fhir/
+        - name: OPENHIM_URL
+          value: https://openhim-core-service:8082
+        - name: API_USERNAME
+          value: root@openhim.org
+        - name: API_PASSWORD
+          value: instant101
+        - name: SERVER_PORT
+          value: '4321'
+        - name: HEARTBEAT
+          value: 'true'
+        - name: LOG_LEVEL
+          value: info
+        - name: NODE_TLS_REJECT_UNAUTHORIZED
+          value: '0'
+        - name: TRUST_SELF_SIGNED
+          value: 'true'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-transactions
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 4321
+    targetPort: 4321
+  selector:
+    app: svc-transactions

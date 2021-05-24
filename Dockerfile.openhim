@@ -50,5 +50,5 @@ RUN sed -i -r "s/path.skip/path.stop/g" node_modules/babel-plugin-transform-stri
 
 COPY . .
 
-CMD npm start
+CMD npm run openhim
 EXPOSE 4321

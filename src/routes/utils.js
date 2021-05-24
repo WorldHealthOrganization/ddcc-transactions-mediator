@@ -108,7 +108,11 @@ function renderHtmlToImage(imgoptions) {
 	html:'<html><head><style>' + (imgoptions.css || '') + '</style><style>body{'
 	    + ' width:' + (imgoptions.width || 400)
 	    + ' height:' + (imgoptions.height || 400)
-	    + '}</style></head><body>' + imgoptions.html 
+	    + '}</style></head><body>' + imgoptions.html ,
+      puppeteerArgs: {
+        headless: true,
+        args: [ '--no-sandbox' ]
+      }
     })
   /*
     .then( image  => {
