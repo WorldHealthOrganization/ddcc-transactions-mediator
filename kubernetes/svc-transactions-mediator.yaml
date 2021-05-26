@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: svc-transactions
-        image: docker.io/lukeaduncan/svc-transactions:v1.0.9
+        image: docker.io/lukeaduncan/svc-transactions:v1.0.10
         ports:
         - containerPort: 4321
           name: svc
