@@ -19,17 +19,28 @@ let urn
 function initializeSVCOptions() {
   let options = {
     questionnaire : "http://who-int.github.io/svc/refs/heads/rc2/SVC-Questionnaire",
-    version : "RC-2-draft",
+    //version : "RC-2-draft",
     responseTypes :  { //this should be sourced from the questionnaire
       "birthDate": "Date",
-      "vaccinecode": "Coding",
-      "expiry": "Date"
+      "sex": "Coding",
+      "vaccine": "Coding",
+      "brand": "Coding",
+      "manufacturer": "Coding",
+      "ma_holder": "Coding",
+      "date": "Date",
+      "dose": "Integer",
+      "total_doses": "Integer",
+      "country": "Coding",
+      "disease": "Coding",
+      "due_date": "Date",
+      "valid_from": "Date",
+      "valid_until": "Date"
     },
     divs :	{    //divs: mustache template should be defined for each resource in the bundle being sent to the SHC Service Registey
-      Composition : "<h4>SHC : SVC Covid 19 ({{version}})</h4><table><tr><td><ul>    <li>Name: {{responses.name}}</li>    <li>Date of Birth: {{responses.birthDate}}</li>    <li>Vaccine Code: {{responses.vaccinecode.code}} </li>    <li>Expiration Date: {{responses.expiry}}</li>    <li>Health Worker: {{responses.hw}} </li>    <li>Public Health Authority: {{responses.pha}}</li>    <li>SHF ID: {{responses.shfid}}</li>    <li>Singature: {{responses.signature}}</li>   </ul>  </td><td>   <img alt='SVC QR Code' src='{{responses.dataURLs.QR}}'/>  </td> </tr></table>",
-      DocumentReference : '<h4>SHC : SVC Covid 19 ({{version}})</h4><ul>  <li>Name: {{responses.name}}</li>  <li>Date of Birth: {{responses.birthDate}}</li>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>SHF ID: {{responses.shfid}}</li>  <li>Singature: {{signatures.QR}}</li> </ul>',
-      Patient : '<ul> <li>Name: {{responses.name}}</li> <li>Date of Birth: {{responses.birthDate}}</li> <li>SHF ID: {{responses.shfid}}</li></ul>',
-      Immunization : '<ul>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>SHF ID: {{responses.shfid}}</li></ul>'
+      Composition : "<h4>DDCC</h4><table><tr><td><ul>    <li>Name: {{responses.name}}</li>    <li>Date of Birth: {{responses.birthDate}}</li>    <li>Vaccine Code: {{responses.vaccinecode.code}} </li>    <li>Expiration Date: {{responses.expiry}}</li>    <li>Health Worker: {{responses.hw}} </li>    <li>Public Health Authority: {{responses.pha}}</li>    <li>DDCC ID: {{responses.paperid}}</li>    <li>Singature: {{responses.signature}}</li>   </ul>  </td><td>   <img alt='SVC QR Code' src='{{responses.dataURLs.QR}}'/>  </td> </tr></table>",
+      DocumentReference : '<h4>DDCC</h4><ul>  <li>Name: {{responses.name}}</li>  <li>Date of Birth: {{responses.birthDate}}</li>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>DDCC ID: {{responses.paperid}}</li>  <li>Singature: {{signatures.QR}}</li> </ul>',
+      Patient : '<ul> <li>Name: {{responses.name}}</li> <li>Date of Birth: {{responses.birthDate}}</li> <li>DDCC ID: {{responses.paperid}}</li></ul>',
+      Immunization : '<ul>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>DDCC ID: {{responses.paperid}}</li></ul>'
     },
     responses : {},
     ids : {},
@@ -60,14 +71,16 @@ function initializeTemplates(options) {
 function processSVCBundle(options) {
   options.ids.Patient = uuidv4()
   options.ids.Immunization = uuidv4()
+  options.ids.ImmunizationRecommendation = uuidv4()
   options.ids.DocumentReference = uuidv4()
-  options.ids.Composition = options.responses.shfid
+  options.ids.Composition = options.responses.paperid
   return {
     resourceType: "Bundle",	
     type: "transaction",
     entry: [
       createRegistrationEntryPatient(options),
       createRegistrationEntryImmunization(options),
+      createRegistrationEntryImmunizationRecommendation(options),
       createRegistrationEntryDocumentReference(options),
       createRegistrationEntryComposition(options)
     ]
@@ -188,17 +201,28 @@ function createRegistrationEntryComposition(options) {
     {
       coding: [
         {
-          code: "svc-covid19"
+          code: "ddcc-vs"
         }
       ]
     }
   ]
   entry.resource.subject = { reference: "Patient/"+options.ids.Patient }
-  entry.resource.author =  [
+  entry.resource.attester =  [
     {
-      type: "Organization",
-      identifier: {
-        value: options.responses.pha
+      code: "official",
+      party: {
+        type: "Organization",
+        identifier: {
+          value: options.responses.pha
+        }
+      }
+    }
+  ]
+  entry.resource.event = [
+    {
+      period: {
+        start: options.responses.valid_from,
+        end: options.responses.valid_until
       }
     }
   ]
@@ -213,27 +237,13 @@ function createRegistrationEntryComposition(options) {
           }
         ]
       },
-      entry: [
-        {
-          reference: "Immunization/"+options.ids.Immunization
-        }
-      ]
-    },
-    {
-      code: {
-        coding: [
-          {
-            system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-SectionCode-CodeSystem",
-            code: "qrdoc"
-          }
-        ]
-      },
+      focus: { reference: "Immunization/"+options.ids.Immunization },
       entry: [
         {
           reference: "DocumentReference/"+options.ids.DocumentReference
         }
       ]
-    }
+    },
   ]
   return entry
 
@@ -283,20 +293,43 @@ function createRegistrationEntryPatient(options) {
       text: options.responses.name
     }
   ]
-  entry.resource.birthDate =options.responses.birthDate
+  entry.resource.identifier = [
+    {
+      value: options.responses.identifier
+    }
+  ]
+  entry.resource.birthDate = options.responses.birthDate
+  entry.resource.gender = options.responses.sex
   return entry
 }
 
 function createRegistrationEntryImmunization(options) {
   let entry = createRegistrationEntry(options,'Immunization')
+  entry.resource.extension = [
+    {
+      url: "https://who-int.github.io/svc/refs/heads/rc2/StructureDefinition/DDCCVaccineBrand",
+      valueCoding: options.responses.brand
+    },
+    {
+      url: "https://who-int.github.io/svc/refs/heads/rc2/StructureDefinition/DDCCVaccineMarketAuthorization",
+      valueCoding: options.responses.ma_holder
+    },
+    {
+      url: "https://who-int.github.io/svc/refs/heads/rc2/StructureDefinition/DDCCCountryOfVaccination",
+      valueCoding: options.responses.country
+    }
+  ]
   entry.resource.status = "completed"
   entry.resource.vaccineCode = {
     coding: [
-      options.responses.vaccinecode
+      options.responses.vaccine
     ]
   }
+  entry.resource.patient = { reference: "Patient/"+options.ids.Patient }
+  entry.resource.manufacturer = { identifier: options.responses.manufacturer }
   entry.resource.lotNumber =  options.responses.lot
-  entry.resource.expirationDate = options.responses.expiry
+  entry.resource.occurenceDateTime = options.responses.date
+  entry.resource.location = { display: options.responses.centre }
   entry.resource.performer =  {
     actor: {
       type: "Practitioner",
@@ -313,9 +346,49 @@ function createRegistrationEntryImmunization(options) {
           value: options.responses.pha
         }
       },
-      doseNumberPositiveInt: 1
+      targetDisease: [ { coding: [ options.responses.disease ] } ],
+      doseNumberPositiveInt: options.responses.dose,
+      seriesDosesPositiveInt: options.responses.total_doses
     }
   ]
+  return entry
+}
+
+function createRegistrationEntryImmunizationRecommendation(options) {
+  let entry = createRegistrationEntry(options,'ImmunizationRecommendation')
+  entry.resource.patient = { reference: "Patient/"+options.ids.Patient }
+  entry.resource.date = options.responses.date
+
+  entry.resource.recommendation = [
+    {
+      vaccineCode: [ {
+        coding: [
+          options.responses.vaccine
+        ]
+      } ],
+      targetDisease: { coding: [ options.responses.disease ] },
+      forecastStatus: { coding: [ {
+        system: "http://terminology.hl7.org/2.1.0/CodeSystem-immunization-recommendation-status.html",
+        code: "due"
+      } ] 
+      },
+      dateCriterion: [
+        {
+          code: {
+            coding: [ {
+              system: "http://loinc.org",
+              code: "30980-7"
+            } ]
+          },
+          value: options.responses.due_date
+        }
+      ],
+      doseNumberPositiveInt: options.responses.dose+1,
+      seriesDosesPositiveInt: options.responses.total_doses
+    }
+  ]
+  entry.resource.supportingImmunization = { reference: "Immunization/" + options.ids.Immunization }
+
   return entry
 }
 
@@ -429,7 +502,7 @@ export const buildHealthCertificate = (
 
     let options = QResponseInitializers[QResponse.questionnaire]()
     options.responses = processResponses(QResponse,options)
-
+/* version can be related to the questionnaire so taking this out for now.
     if ( options.responses.version !== options.version ) {
       resolve( {
         resourceType: "OperationOutcome",
@@ -442,6 +515,7 @@ export const buildHealthCertificate = (
         ]
       } )
     }
+    */
 
     //Need to verify that this is what we want to stringify. (for discussion)
     options.content64['QR'] = Buffer.from(JSON.stringify(QResponse.item)).toString('base64') 
@@ -530,7 +604,7 @@ export const buildHealthCertificate = (
       let compRegexp = /^Composition\/([^\/]+)\/_history\/([^\/]+)$/
       let [ compLoc, compID, compVers ] = json.entry[3].response.location.match( compRegexp )
       */
-            fetch( FHIR_SERVER + "Composition/" + options.responses.shfid + "/$document" )
+            fetch( FHIR_SERVER + "Composition/" + options.responses.paperid + "/$document" )
               .then( res => res.json() ).then( json => {
                 resolve( json )
               } )
