@@ -71,7 +71,15 @@ function initializeTemplates(options) {
 
 function processDDCCBundle(options) {
   options.ids.QuestionnaireResponse = uuidv4()
-  options.ids.Patient = uuidv4()
+  if ( options.resources.Composition 
+    && options.resources.Composition.subject 
+    && options.resources.Composition.subject.reference
+    && options.resources.Composition.subject.reference.startsWith("Patient/")
+  ) {
+    options.ids.Patient = options.resources.Composition.subject.reference.substring(8)
+  } else {
+    options.ids.Patient = uuidv4()
+  }
   options.ids.Immunization = uuidv4()
   options.ids.ImmunizationRecommendation = uuidv4()
   options.ids.DocumentReference = uuidv4()
@@ -80,7 +88,7 @@ function processDDCCBundle(options) {
     resourceType: "Bundle",	
     type: "transaction",
     entry: [
-      createRegistrationEntryQuestionnaireReponse(options),
+      createRegistrationEntryQuestionnaireResponse(options),
       createRegistrationEntryPatient(options),
       createRegistrationEntryImmunization(options),
       createRegistrationEntryImmunizationRecommendation(options),
@@ -169,6 +177,21 @@ export const retrieveDocumentReference  = (shcid) => {
   })
 }
 
+const retrieveResource = (id) => {
+  return new Promise( (resolve) => {
+    fetch( FHIR_SERVER + id, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/fhir+json' }
+    } )
+      .then( res => res.json() ).then( json => {
+        resolve(json)
+      }).catch( err => {
+        logger.info('Error retrieving Resource ID=' + id)
+        resolve( {'error': JSON.stringify(err)})
+      })
+
+  })
+}
 
 
 function createRegistrationEntry(options,resourceType) {
@@ -193,34 +216,40 @@ function createRegistrationEntry(options,resourceType) {
 function createRegistrationEntryQuestionnaireResponse(options) {
   let entry = createRegistrationEntry(options,'QuestionnaireResponse')
   entry.resource = options.resources.QuestionnaireResponse
+  entry.resource.id = options.ids.QuestionnaireResponse
+  entry.resource.subject = { reference: "Patient/"+options.ids.Patient }
+  return entry
 }
 
 function createRegistrationEntryComposition(options) {
   let entry = createRegistrationEntry(options,'Composition')
-  entry.resource.type =  {
-    coding: [
-      {
-        system: "http://loinc.org",
-        code: "82593-5"
-      }
-    ]
-  }
-  entry.resource.category =  [
-    {
+  if ( options.resources.Composition ) {
+    entry.resource = options.resources.Composition
+    entry.resource.date = options.now
+    entry.resource.status = "amended"
+  } else {
+    entry.resource.type =  {
       coding: [
         {
-          code: "ddcc-vs"
+          system: "http://loinc.org",
+          code: "82593-5"
         }
       ]
     }
-  ]
-  entry.resource.subject = { reference: "Patient/"+options.ids.Patient }
-  entry.resource.author =  [
-    {
-      type: "Organization",
-      identifier: { value: options.responses.pha }
-    }
-  ]
+    entry.resource.category =  [
+      {
+        coding: [
+          {
+            code: "ddcc-vs"
+          }
+        ]
+      }
+    ]
+    entry.resource.subject = { reference: "Patient/"+options.ids.Patient }
+    entry.resource.title =  "International Certificate of Vaccination or Prophylaxis"
+    entry.resource.section = []
+  }
+  // added immunization to entry as well due to bug in HAPI on $document
   entry.resource.event = [
     {
       period: {
@@ -229,9 +258,13 @@ function createRegistrationEntryComposition(options) {
       }
     }
   ]
-  entry.resource.title =  "International Certificate of Vaccination or Prophylaxis"
-  // added immunization to entry as well due to bug in HAPI on $document
-  entry.resource.section =  [
+  entry.resource.author =  [
+    {
+      type: "Organization",
+      identifier: { value: options.responses.pha }
+    }
+  ]
+  entry.resource.section.push( 
     {
       code: {
         coding: [
@@ -253,8 +286,9 @@ function createRegistrationEntryComposition(options) {
         { reference: "ImmunizationRecommendation/"+options.ids.ImmunizationRecommendation },
         { reference: "DocumentReference/"+options.ids.DocumentReference }
       ]
-    },
-  ]
+    }
+  )
+
   return entry
 
 }
@@ -454,7 +488,7 @@ let QResponseProcessors = {
 export const buildHealthCertificate = (
   SHCParameters
 ) => {
-  return new Promise( (resolve) => {
+  return new Promise( async (resolve) => {
 
     if ( SHCParameters.resourceType !== "Parameters" || !SHCParameters.parameter ) {
       resolve( {
@@ -513,6 +547,10 @@ export const buildHealthCertificate = (
     let options = QResponseInitializers[QResponse.questionnaire]()
     options.resources.QuestionnaireResponse = QResponse
     options.responses = processResponses(QResponse,options)
+    let existingComposition = await retrieveResource("Composition/"+options.responses.paperid)
+    if ( existingComposition && existingComposition.resourceType === "Composition" ) {
+      options.resources.Composition = existingComposition
+    }
 /* version can be related to the questionnaire so taking this out for now.
     if ( options.responses.version !== options.version ) {
       resolve( {
