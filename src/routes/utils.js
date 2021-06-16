@@ -16,8 +16,9 @@ import {FHIR_SERVER} from '../config/config'
 let urn
 
 
-function initializeSVCOptions() {
+function initializeDDCCOptions() {
   let options = {
+    resources: {},
     questionnaire : "http://who-int.github.io/svc/refs/heads/rc2/SVC-Questionnaire",
     //version : "RC-2-draft",
     responseTypes :  { //this should be sourced from the questionnaire
@@ -37,7 +38,7 @@ function initializeSVCOptions() {
       "valid_until": "Date"
     },
     divs :	{    //divs: mustache template should be defined for each resource in the bundle being sent to the SHC Service Registey
-      Composition : "<h4>DDCC</h4><table><tr><td><ul>    <li>Name: {{responses.name}}</li>    <li>Date of Birth: {{responses.birthDate}}</li>    <li>Vaccine Code: {{responses.vaccinecode.code}} </li>    <li>Expiration Date: {{responses.expiry}}</li>    <li>Health Worker: {{responses.hw}} </li>    <li>Public Health Authority: {{responses.pha}}</li>    <li>DDCC ID: {{responses.paperid}}</li>    <li>Singature: {{responses.signature}}</li>   </ul>  </td><td>   <img alt='SVC QR Code' src='{{responses.dataURLs.QR}}'/>  </td> </tr></table>",
+      Composition : "<h4>DDCC</h4><table><tr><td><ul>    <li>Name: {{responses.name}}</li>    <li>Date of Birth: {{responses.birthDate}}</li>    <li>Vaccine Code: {{responses.vaccinecode.code}} </li>    <li>Expiration Date: {{responses.expiry}}</li>    <li>Health Worker: {{responses.hw}} </li>    <li>Public Health Authority: {{responses.pha}}</li>    <li>DDCC ID: {{responses.paperid}}</li>    <li>Singature: {{responses.signature}}</li>   </ul>  </td><td>   <img alt='DDCC QR Code' src='{{responses.dataURLs.QR}}'/>  </td> </tr></table>",
       DocumentReference : '<h4>DDCC</h4><ul>  <li>Name: {{responses.name}}</li>  <li>Date of Birth: {{responses.birthDate}}</li>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>DDCC ID: {{responses.paperid}}</li>  <li>Singature: {{signatures.QR}}</li> </ul>',
       Patient : '<ul> <li>Name: {{responses.name}}</li> <li>Date of Birth: {{responses.birthDate}}</li> <li>DDCC ID: {{responses.paperid}}</li></ul>',
       Immunization : '<ul>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>DDCC ID: {{responses.paperid}}</li></ul>'
@@ -68,7 +69,8 @@ function initializeTemplates(options) {
   return templates
 }
 
-function processSVCBundle(options) {
+function processDDCCBundle(options) {
+  options.ids.QuestionnaireResponse = uuidv4()
   options.ids.Patient = uuidv4()
   options.ids.Immunization = uuidv4()
   options.ids.ImmunizationRecommendation = uuidv4()
@@ -78,6 +80,7 @@ function processSVCBundle(options) {
     resourceType: "Bundle",	
     type: "transaction",
     entry: [
+      createRegistrationEntryQuestionnaireReponse(options),
       createRegistrationEntryPatient(options),
       createRegistrationEntryImmunization(options),
       createRegistrationEntryImmunizationRecommendation(options),
@@ -175,7 +178,7 @@ function createRegistrationEntry(options,resourceType) {
       resourceType: resourceType,
       id: options.ids[resourceType],
       text: {
-        div : options.divs[resourceType],
+        div : options.divs[resourceType] || "",
         status : 'generated'
       },
       date: options.now
@@ -185,6 +188,11 @@ function createRegistrationEntry(options,resourceType) {
       url: resourceType + "/" + options.ids[resourceType]
     }
   }
+}
+
+function createRegistrationEntryQuestionnaireResponse(options) {
+  let entry = createRegistrationEntry(options,'QuestionnaireResponse')
+  entry.resource = options.resources.QuestionnaireResponse
 }
 
 function createRegistrationEntryComposition(options) {
@@ -207,15 +215,10 @@ function createRegistrationEntryComposition(options) {
     }
   ]
   entry.resource.subject = { reference: "Patient/"+options.ids.Patient }
-  entry.resource.attester =  [
+  entry.resource.author =  [
     {
-      code: "official",
-      party: {
-        type: "Organization",
-        identifier: {
-          value: options.responses.pha
-        }
-      }
+      type: "Organization",
+      identifier: { value: options.responses.pha }
     }
   ]
   entry.resource.event = [
@@ -227,6 +230,7 @@ function createRegistrationEntryComposition(options) {
     }
   ]
   entry.resource.title =  "International Certificate of Vaccination or Prophylaxis"
+  // added immunization to entry as well due to bug in HAPI on $document
   entry.resource.section =  [
     {
       code: {
@@ -237,11 +241,17 @@ function createRegistrationEntryComposition(options) {
           }
         ]
       },
+      author: [
+        {
+          type: "Organization",
+          identifier: { value: options.responses.pha }
+        }
+      ],
       focus: { reference: "Immunization/"+options.ids.Immunization },
       entry: [
-        {
-          reference: "DocumentReference/"+options.ids.DocumentReference
-        }
+        { reference: "Immunization/"+options.ids.Immunization },
+        { reference: "ImmunizationRecommendation/"+options.ids.ImmunizationRecommendation },
+        { reference: "DocumentReference/"+options.ids.DocumentReference }
       ]
     },
   ]
@@ -434,10 +444,10 @@ function processResponses(QResponse,options) {
 
 //one needs to be defined for each questtonnaire handled
 let QResponseInitializers = {
-  "http://who-int.github.io/svc/refs/heads/rc2/SVC-Questionnaire":initializeSVCOptions
+  "http://who-int.github.io/svc/refs/heads/rc2/SVC-Questionnaire":initializeDDCCOptions
 }
 let QResponseProcessors = {
-  "http://who-int.github.io/svc/refs/heads/rc2/SVC-Questionnaire":processSVCBundle
+  "http://who-int.github.io/svc/refs/heads/rc2/SVC-Questionnaire":processDDCCBundle
 }
 
 
@@ -501,6 +511,7 @@ export const buildHealthCertificate = (
     }
 
     let options = QResponseInitializers[QResponse.questionnaire]()
+    options.resources.QuestionnaireResponse = QResponse
     options.responses = processResponses(QResponse,options)
 /* version can be related to the questionnaire so taking this out for now.
     if ( options.responses.version !== options.version ) {
@@ -528,7 +539,7 @@ export const buildHealthCertificate = (
     qrcode.toCanvas( canvasElementQR , QRCBOR45, { errorCorrectionLevel: 'Q' } ).then(
       async( canvasElementQR ) => {
         const ctxQR = canvasElementQR.getContext('2d')
-        let watermark = 'WHO-SVC: ' + options.ids.DocumentReference //this is the shc id
+        let watermark = 'WHO-DDCC: ' + options.ids.DocumentReference //this is the shc id
         let xoff = Math.max(0,Math.floor ( (canvasElementQR.width - ctxQR.measureText(watermark).width) / 2))
         ctxQR.fillText(watermark, xoff ,10)
 
@@ -598,12 +609,6 @@ export const buildHealthCertificate = (
           headers: { 'Content-Type': 'application/fhir+json' }
         } )
           .then( res => res.json() ).then( json => {
-            // Hacky for now, but Composition was 4th, so the return 
-            // will be, too.
-            /*
-      let compRegexp = /^Composition\/([^\/]+)\/_history\/([^\/]+)$/
-      let [ compLoc, compID, compVers ] = json.entry[3].response.location.match( compRegexp )
-      */
             fetch( FHIR_SERVER + "Composition/" + options.responses.paperid + "/$document" )
               .then( res => res.json() ).then( json => {
                 resolve( json )
