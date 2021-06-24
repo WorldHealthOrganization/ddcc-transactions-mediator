@@ -3,16 +3,16 @@
 import express from 'express'
 
 import {buildReturnObject} from './utils'
-import getQRCode from './getQRCode'
-import submitHealthEvent from './submitHealthEvent'
-import generateHealthCertificate from './generateHealthCertificate'
+import ddccRoutes from './ddccRoutes'
+import testRoutes from './test'
 import logger from '../logger'
 
 const routes = express.Router()
 
-routes.get('/svc/DocumentReference/:shcid/([\$])getQRCode', getQRCode)
-routes.post('/svc/submitHealthEvent', submitHealthEvent)
-routes.post('/svc/generateHealthCertificate', generateHealthCertificate)
+
+routes.use('/test', testRoutes)
+
+routes.use('/ddcc', ddccRoutes)
 // Add more routes here if needed
 
 // Any request regardless of request type or url path to the mediator port will be caught here

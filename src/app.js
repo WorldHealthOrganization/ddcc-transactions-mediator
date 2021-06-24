@@ -1,10 +1,7 @@
-// @strip-block
 'use strict'
 
 import express from 'express'
 
-import openhim from './openhim'
-import {SERVER_PORT} from './config/config'
 import routes from './routes/'
 import logger from './logger'
 
@@ -14,9 +11,4 @@ app.use(express.json( { type: [ "application/fhir+json", "application/json" ] } 
 
 app.use('/', routes)
 
-app.listen(SERVER_PORT, () => {
-  logger.info(`Server listening on Port ${SERVER_PORT}...`)
-  /* openhim:start */
-  openhim.mediatorSetup()
-  /* openhim:end */
-})
+module.exports = app
