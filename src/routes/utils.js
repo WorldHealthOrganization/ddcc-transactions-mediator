@@ -19,7 +19,7 @@ let urn
 function initializeDDCCOptions() {
   let options = {
     resources: {},
-    questionnaire : "http://who-int.github.io/svc/refs/heads/rc2/SVC-Questionnaire",
+    questionnaire : "http://worldhealthorganization.github.io/ddcc/DDCCVSCoreDataSetQuestionnaire",
     //version : "RC-2-draft",
     responseTypes :  { //this should be sourced from the questionnaire
       "birthDate": "Date",
@@ -29,6 +29,7 @@ function initializeDDCCOptions() {
       "manufacturer": "Coding",
       "ma_holder": "Coding",
       "date": "Date",
+      "vaccine_valid": "Date",
       "dose": "Integer",
       "total_doses": "Integer",
       "country": "Coding",
@@ -37,11 +38,11 @@ function initializeDDCCOptions() {
       "valid_from": "Date",
       "valid_until": "Date"
     },
-    divs :	{    //divs: mustache template should be defined for each resource in the bundle being sent to the SHC Service Registey
-      Composition : "<h4>DDCC</h4><table><tr><td><ul>    <li>Name: {{responses.name}}</li>    <li>Date of Birth: {{responses.birthDate}}</li>    <li>Vaccine Code: {{responses.vaccinecode.code}} </li>    <li>Expiration Date: {{responses.expiry}}</li>    <li>Health Worker: {{responses.hw}} </li>    <li>Public Health Authority: {{responses.pha}}</li>    <li>DDCC ID: {{responses.paperid}}</li>    <li>Singature: {{responses.signature}}</li>   </ul>  </td><td>   <img alt='DDCC QR Code' src='{{responses.dataURLs.QR}}'/>  </td> </tr></table>",
-      DocumentReference : '<h4>DDCC</h4><ul>  <li>Name: {{responses.name}}</li>  <li>Date of Birth: {{responses.birthDate}}</li>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>DDCC ID: {{responses.paperid}}</li>  <li>Singature: {{signatures.QR}}</li> </ul>',
-      Patient : '<ul> <li>Name: {{responses.name}}</li> <li>Date of Birth: {{responses.birthDate}}</li> <li>DDCC ID: {{responses.paperid}}</li></ul>',
-      Immunization : '<ul>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>DDCC ID: {{responses.paperid}}</li></ul>'
+    divs :	{    //divs: mustache template should be defined for each resource in the bundle being sent to the DDCC Service Registey
+      Composition : "<h4>DDCC</h4><table><tr><td><ul>    <li>Name: {{responses.name}}</li>    <li>Date of Birth: {{responses.birthDate}}</li>    <li>Vaccine Code: {{responses.vaccinecode.code}} </li>    <li>Expiration Date: {{responses.expiry}}</li>    <li>Health Worker: {{responses.hw}} </li>    <li>Public Health Authority: {{responses.pha}}</li>    <li>DDCC ID: {{responses.hcid}}</li>    <li>Singature: {{responses.signature}}</li>   </ul>  </td><td>   <img alt='DDCC QR Code' src='{{responses.dataURLs.QR}}'/>  </td> </tr></table>",
+      DocumentReference : '<h4>DDCC</h4><ul>  <li>Name: {{responses.name}}</li>  <li>Date of Birth: {{responses.birthDate}}</li>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>DDCC ID: {{responses.hcid}}</li>  <li>Singature: {{signatures.QR}}</li> </ul>',
+      Patient : '<ul> <li>Name: {{responses.name}}</li> <li>Date of Birth: {{responses.birthDate}}</li> <li>DDCC ID: {{responses.hcid}}</li></ul>',
+      Immunization : '<ul>  <li>Vaccine Code: {{responses.vaccinecode.code}} </li>  <li>Expiration Date: {{responses.expiry}}</li>  <li>Health Worker: {{responses.hw}} </li>  <li>Public Health Authority: {{responses.pha}}</li>  <li>DDCC ID: {{responses.hcid}}</li></ul>'
     },
     responses : {},
     ids : {},
@@ -83,7 +84,7 @@ function processDDCCBundle(options) {
   options.ids.Immunization = uuidv4()
   options.ids.ImmunizationRecommendation = uuidv4()
   options.ids.DocumentReference = uuidv4()
-  options.ids.Composition = options.responses.paperid
+  options.ids.Composition = options.responses.hcid
   return {
     resourceType: "Bundle",	
     type: "transaction",
@@ -92,7 +93,7 @@ function processDDCCBundle(options) {
       createRegistrationEntryPatient(options),
       createRegistrationEntryImmunization(options),
       createRegistrationEntryImmunizationRecommendation(options),
-      createRegistrationEntryDocumentReference(options),
+      createRegistrationEntryDocumentReferenceQR(options),
       createRegistrationEntryComposition(options)
     ]
   }    
@@ -158,19 +159,19 @@ export const buildErrorObject = (
   return buildReturnObject( 'Failed', 401, errorMessage )
 }
 
-export const retrieveDocumentReference  = (shcid) => {
-  logger.info('Retrieving Document Reference ' + shcid)
-  logger.info( FHIR_SERVER + 'DocumentReference/' + shcid )
+export const retrieveDocumentReference  = (hcid) => {
+  logger.info('Retrieving Document Reference ' + hcid)
+  logger.info( FHIR_SERVER + 'DocumentReference/' + hcid )
   return new Promise( (resolve) => {
-    fetch( FHIR_SERVER + 'DocumentReference/' + shcid , {
+    fetch( FHIR_SERVER + 'DocumentReference/' + hcid , {
       method: 'GET',
       headers: { 'Content-Type': 'application/fhir+json' }
     } )
       .then( res => res.json() ).then( json => {
-        logger.info('Retrieved Document Reference ID=' + shcid)
+        logger.info('Retrieved Document Reference ID=' + hcid)
         resolve(json)
       }).catch( err => {
-        logger.info('Error retrieving Document Reference ID=' + shcid)
+        logger.info('Error retrieving Document Reference ID=' + hcid)
         resolve( {'error': JSON.stringify(err)})
       })
 
@@ -293,13 +294,13 @@ function createRegistrationEntryComposition(options) {
 
 }
 
-function createRegistrationEntryDocumentReference(options) {
+function createRegistrationEntryDocumentReferenceQR(options) {
   let entry = createRegistrationEntry(options,'DocumentReference')
   entry.resource.status = "current"
   entry.resource.category = {
     coding: [
       {
-        system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Category-Usage-CodeSystem",
+        system: "https://WorldHealthOrganization.github.io/ddcc/CodeSystem/DDCC-QR-Category-Usage-CodeSystem",
         code: "who"
       }
     ]
@@ -312,7 +313,7 @@ function createRegistrationEntryDocumentReference(options) {
         data: options.images.QR
       },
       format: {
-        system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Format-CodeSystem",
+        system: "https://WorldHealthOrganization.github.io/ddcc/CodeSystem/DDCC-QR-Format-CodeSystem",
         code: "image"
       }
     },
@@ -322,7 +323,7 @@ function createRegistrationEntryDocumentReference(options) {
         data: options.content64.QR
       },
       format: {
-        system: "https://who-int.github.io/svc/refs/heads/rc2/CodeSystem/SHC-QR-Format-CodeSystem",
+        system: "https://WorldHealthOrganization.github.io/ddcc/CodeSystem/DDCC-QR-Format-CodeSystem",
         code: "serialized"
       }
     },
@@ -351,16 +352,20 @@ function createRegistrationEntryImmunization(options) {
   let entry = createRegistrationEntry(options,'Immunization')
   entry.resource.extension = [
     {
-      url: "https://who-int.github.io/svc/refs/heads/rc2/StructureDefinition/DDCCVaccineBrand",
+      url: "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCVaccineBrand",
       valueCoding: options.responses.brand
     },
     {
-      url: "https://who-int.github.io/svc/refs/heads/rc2/StructureDefinition/DDCCVaccineMarketAuthorization",
+      url: "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCVaccineMarketAuthorization",
       valueCoding: options.responses.ma_holder
     },
     {
-      url: "https://who-int.github.io/svc/refs/heads/rc2/StructureDefinition/DDCCCountryOfVaccination",
+      url: "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCCountryOfVaccination",
       valueCoding: options.responses.country
+    },
+    {
+      url: "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCVaccineValidFrom",
+      valueDateTime: options.responses.vaccine_valid
     }
   ]
   entry.resource.status = "completed"
@@ -478,19 +483,19 @@ function processResponses(QResponse,options) {
 
 //one needs to be defined for each questtonnaire handled
 let QResponseInitializers = {
-  "http://who-int.github.io/svc/refs/heads/rc2/SVC-Questionnaire":initializeDDCCOptions
+  "http://WorldHealthOrganization.github.io/ddcc/DDCCVSCoreDataSetQuestionnaire":initializeDDCCOptions
 }
 let QResponseProcessors = {
-  "http://who-int.github.io/svc/refs/heads/rc2/SVC-Questionnaire":processDDCCBundle
+  "http://WorldHealthOrganization.github.io/ddcc/DDCCVSCoreDataSetQuestionnaire":processDDCCBundle
 }
 
 
 export const buildHealthCertificate = (
-  SHCParameters
+  DDCCParameters
 ) => {
   return new Promise( async (resolve) => {
 
-    if ( SHCParameters.resourceType !== "Parameters" || !SHCParameters.parameter ) {
+    if ( DDCCParameters.resourceType !== "Parameters" || !DDCCParameters.parameter ) {
       resolve( {
         resourceType: "OperationOutcome",
         issue: [
@@ -502,7 +507,7 @@ export const buildHealthCertificate = (
         ]
       } ) 
     }
-    let parameter = SHCParameters.parameter.find( param => param.name === "response" )
+    let parameter = DDCCParameters.parameter.find( param => param.name === "response" )
     if ( !parameter || !parameter.resource ) {
       resolve( {
         resourceType: "OperationOutcome",
@@ -538,7 +543,7 @@ export const buildHealthCertificate = (
           {
             severity: "error",
             code: "required",
-            diagnostics: "Do not know how to handle " + QResponse.questionniare  
+            diagnostics: "Do not know how to handle " + QResponse.questionnaire  
           }
         ]
       } )
@@ -547,7 +552,7 @@ export const buildHealthCertificate = (
     let options = QResponseInitializers[QResponse.questionnaire]()
     options.resources.QuestionnaireResponse = QResponse
     options.responses = processResponses(QResponse,options)
-    let existingComposition = await retrieveResource("Composition/"+options.responses.paperid)
+    let existingComposition = await retrieveResource("Composition/"+options.responses.hcid)
     if ( existingComposition && existingComposition.resourceType === "Composition" ) {
       options.resources.Composition = existingComposition
     }
@@ -577,7 +582,7 @@ export const buildHealthCertificate = (
     qrcode.toCanvas( canvasElementQR , QRCBOR45, { errorCorrectionLevel: 'Q' } ).then(
       async( canvasElementQR ) => {
         const ctxQR = canvasElementQR.getContext('2d')
-        let watermark = 'WHO-DDCC: ' + options.ids.DocumentReference //this is the shc id
+        let watermark = 'WHO-DDCC: ' + options.ids.DocumentReference //this is the hcid
         let xoff = Math.max(0,Math.floor ( (canvasElementQR.width - ctxQR.measureText(watermark).width) / 2))
         ctxQR.fillText(watermark, xoff ,10)
 
@@ -593,7 +598,7 @@ export const buildHealthCertificate = (
         let textDivImage =  await renderHtmlToImage(imgoptions)
 
         //really we should be doing this at the end after we processed all QR codes generated
-        //what is getting attached here is the representation of the SHC
+        //what is getting attached here is the representation of the DDCC
         //from the the QResps and all of QR codes	      
         let canvasElement = canvas.createCanvas(
           options.width + canvasElementQR.width +40 ,
@@ -647,7 +652,7 @@ export const buildHealthCertificate = (
           headers: { 'Content-Type': 'application/fhir+json' }
         } )
           .then( res => res.json() ).then( json => {
-            fetch( FHIR_SERVER + "Composition/" + options.responses.paperid + "/$document" )
+            fetch( FHIR_SERVER + "Composition/" + options.responses.hcid + "/$document" )
               .then( res => res.json() ).then( json => {
                 resolve( json )
               } )
