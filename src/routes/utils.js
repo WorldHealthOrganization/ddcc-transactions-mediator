@@ -72,19 +72,20 @@ function initializeTemplates(options) {
 
 function processDDCCBundle(options) {
   options.ids.QuestionnaireResponse = uuidv4()
-  if ( options.resources.Composition 
-    && options.resources.Composition.subject 
-    && options.resources.Composition.subject.reference
-    && options.resources.Composition.subject.reference.startsWith("Patient/")
+  if ( options.resources.List 
+    && options.resources.List.subject 
+    && options.resources.List.subject.reference
+    && options.resources.List.subject.reference.startsWith("Patient/")
   ) {
-    options.ids.Patient = options.resources.Composition.subject.reference.substring(8)
+    options.ids.Patient = options.resources.List.subject.reference.substring(8)
   } else {
     options.ids.Patient = uuidv4()
   }
   options.ids.Immunization = uuidv4()
   options.ids.ImmunizationRecommendation = uuidv4()
   options.ids.DocumentReference = uuidv4()
-  options.ids.Composition = options.responses.hcid
+  options.ids.Composition = uuidv4()
+  //options.ids.Composition = options.responses.hcid
   return {
     resourceType: "Bundle",	
     type: "transaction",
@@ -217,18 +218,20 @@ function createRegistrationEntry(options,resourceType) {
 function createRegistrationEntryQuestionnaireResponse(options) {
   let entry = createRegistrationEntry(options,'QuestionnaireResponse')
   entry.resource = options.resources.QuestionnaireResponse
-  entry.resource.id = options.ids.QuestionnaireResponse
+  //entry.resource.id = options.ids.QuestionnaireResponse
   entry.resource.subject = { reference: "Patient/"+options.ids.Patient }
   return entry
 }
 
 function createRegistrationEntryComposition(options) {
   let entry = createRegistrationEntry(options,'Composition')
+  /*
   if ( options.resources.Composition ) {
     entry.resource = options.resources.Composition
     entry.resource.date = options.now
     entry.resource.status = "amended"
   } else {
+  */
     entry.resource.type =  {
       coding: [
         {
@@ -249,7 +252,7 @@ function createRegistrationEntryComposition(options) {
     entry.resource.subject = { reference: "Patient/"+options.ids.Patient }
     entry.resource.title =  "International Certificate of Vaccination or Prophylaxis"
     entry.resource.section = []
-  }
+  //}
   // added immunization to entry as well due to bug in HAPI on $document
   entry.resource.event = [
     {
@@ -483,10 +486,132 @@ function processResponses(QResponse,options) {
 
 //one needs to be defined for each questtonnaire handled
 let QResponseInitializers = {
-  "http://WorldHealthOrganization.github.io/ddcc/DDCCVSCoreDataSetQuestionnaire":initializeDDCCOptions
+  "http://worldhealthorganization.github.io/ddcc/DDCCVSCoreDataSetQuestionnaire":initializeDDCCOptions
 }
 let QResponseProcessors = {
-  "http://WorldHealthOrganization.github.io/ddcc/DDCCVSCoreDataSetQuestionnaire":processDDCCBundle
+  "http://worldhealthorganization.github.io/ddcc/DDCCVSCoreDataSetQuestionnaire":processDDCCBundle
+}
+
+function putPDBEntry(resource) {
+  return {
+    resource: {
+      resource
+    },
+    request: {
+      method: "PUT",
+      url: resource.resourceType + "/" + resource.id 
+    }
+  }
+}
+function postPDBEntry(resourceType,tempId) {
+  return {
+    fullUrl: "urn:uuid:"+tempId,
+    resource: {
+      resourceType: resourceType
+    },
+    request: {
+      method: "POST",
+      url: resourceType 
+    }
+  }
+}
+
+function createPDBSubmissionSet( options, docRefId ) {
+  let entry = postPDBEntry( "List", uuidv4() )
+  entry.resource.subject = { reference: "Patient/" + options.resources.Patient.id }
+  entry.resource.status = "current"
+  entry.resource.mode = "working"
+  entry.resource.code = {
+    coding: [
+      {
+	system: "http://profiles.ihe.net/ITI/MHD/CodeSystem/MHDlistTypes",
+	code: "submissionset"
+      }
+    ]
+  }
+  entry.resource.date = options.now
+  entry.resource.entry = [
+    {
+      item: { reference: "urn:uuid:" + docRefId }
+    },
+    {
+      item: { reference: "List/"+ options.responses.hcid }
+    }
+  ]
+  return entry
+}
+
+function createPDBDocumentReference( options, docRefId, docId ) {
+  let entry = postPDBEntry( "DocumentReference", docRefId )
+  entry.resource.status = "current"
+  entry.resource.subject = { reference: "Patient/" + options.resources.Patient.id }
+  entry.resource.date = options.now
+  entry.resource.content = [
+    {
+      attachment: {
+	contentType: "application/fhir",
+	url: FHIR_SERVER + "Bundle/" + docId
+      }
+    }
+  ]
+  return entry
+}
+
+function createPDBFolder( options, docRefId ) {
+  let entry
+  if ( options.resources.List ) {
+    entry = putPDBEntry( options.resources.List )
+    entry.resource.date = options.now
+  } else {
+    let resource = {
+      resourceType: "List",
+      id: options.responses.hcid,
+      status: "current",
+      mode: "working",
+      code: {
+	coding: [
+	  {
+	    system: "http://profiles.ihe.net/ITI/MHD/CodeSystem/MHDlistTypes",
+	    code: "folder"
+	  }
+	]
+      },
+      subject: { reference: "Patient/" + options.resources.Patient.id },
+      date: options.now,
+      entry: []
+    }
+    entry = putPDBEntry( resource )
+  }
+  entry.resource.entry.push( {
+    item: { reference: "urn:uuid:" + docRefId }
+  } )
+  return entry
+
+}
+
+function createProvideDocumentBundle( doc, options ) {
+  let docRefId = uuidv4()
+  let provideDocumentBundle = {
+    resourceType: "Bundle",
+    type: "transaction",
+    entry: [
+      createPDBSubmissionSet( options, docRefId ),
+      createPDBDocumentReference( options, docRefId, doc.id ),
+      createPDBFolder( options, docRefId ),
+      putPDBEntry( options.resources.Patient )
+    ]
+  }
+
+  // Should change this to the a different config in case the registry is somewhere else.
+  fetch( FHIR_SERVER, {
+          method: 'POST',
+          body: JSON.stringify( provideDocumentBundle ),
+          headers: { 'Content-Type': 'application/fhir+json' }
+        } ).then( res => res.json() ).then( json => {
+	  logger.info("Saved provideDocumentBundle.")
+	} ).catch( err => {
+	  logger.error( err.message )
+	} )
 }
 
 
@@ -552,9 +677,9 @@ export const buildHealthCertificate = (
     let options = QResponseInitializers[QResponse.questionnaire]()
     options.resources.QuestionnaireResponse = QResponse
     options.responses = processResponses(QResponse,options)
-    let existingComposition = await retrieveResource("Composition/"+options.responses.hcid)
-    if ( existingComposition && existingComposition.resourceType === "Composition" ) {
-      options.resources.Composition = existingComposition
+    let existingFolder = await retrieveResource("List/"+options.responses.hcid)
+    if ( existingFolder && existingFolder.resourceType === "List" ) {
+      options.resources.List = existingFolder
     }
 /* version can be related to the questionnaire so taking this out for now.
     if ( options.responses.version !== options.version ) {
@@ -619,6 +744,22 @@ export const buildHealthCertificate = (
 
         let addBundle = QResponseProcessors[QResponse.questionnaire](options)
 
+	let addPatient = addBundle.entry.find( entry => entry.resource.resourceType === 'Patient' )
+	if ( addPatient && addPatient.resource ) {
+	  options.resources.Patient = addPatient.resource
+	} else {
+	  resolve( {
+	    resourceType: "OperationOutcome",
+	    issue: [
+	      {
+		severity: "error",
+		code: "exception",
+		diagnostics: "Missing Patient in addBundle."
+	      }
+	    ]
+	  } )
+	}
+
         /*
   let QRCode = {
     resourceType: "Binary"
@@ -652,9 +793,36 @@ export const buildHealthCertificate = (
           headers: { 'Content-Type': 'application/fhir+json' }
         } )
           .then( res => res.json() ).then( json => {
+
             fetch( FHIR_SERVER + "Composition/" + options.responses.hcid + "/$document" )
-              .then( res => res.json() ).then( json => {
-                resolve( json )
+              .then( res => res.json() ).then( doc => {
+
+
+		let docId = uuidv4()
+		doc.id = docId
+		fetch( FHIR_SERVER + "Document/"+docId, {
+		  method: 'PUT',
+		  body: JSON.stringify( doc ),
+		  headers: { 'Content-Type': 'application/fhir+json' }
+		} ).then( res => res.json() ).then( docAdded => {
+
+		  createProvideDocumentBundle( doc, options )
+
+		  resolve( doc )
+		} ).catch( err => {
+		  resolve( {
+		    resourceType: "OperationOutcome",
+		    issue: [
+		      {
+			severity: "error",
+			code: "exception",
+			diagnostics: err.message
+		      }
+		    ]
+		  } )
+		} )
+
+
               } )
               .catch( err => {
                 resolve( {
