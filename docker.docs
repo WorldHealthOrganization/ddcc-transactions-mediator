@@ -1,0 +1,10 @@
+docker login
+
+docker build -t svc-transactions .
+docker build -t svc-transactions-openhim -f Dockerfile.openhim .
+
+docker tag svc-transactions:latest lukeaduncan/svc-transactions:latest
+docker tag svc-transactions-openhim:latest lukeaduncan/svc-transactions-openhim:latest
+
+docker push lukeaduncan/svc-transactions:latest
+docker push lukeaduncan/svc-transactions-openhim:latest
