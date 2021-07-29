@@ -6,6 +6,7 @@
     "base45": "^3.0.0",
     "canvas": "^2.8.0",
     "cbor": "^7.0.5",
+    "cose-js": "^0.6.0",
     "express": "^4.17.1",
     "handlebars": "^4.7.7",
     "node-fetch": "^2.6.1",

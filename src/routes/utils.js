@@ -5,16 +5,20 @@ const handlebars = require("handlebars")
 const nodeHtmlToImage = require('node-html-to-image')
 const { v4: uuidv4 } = require('uuid')
 const cbor = require('cbor')
+const cose = require('cose-js')
 const base45 = require('base45')
 const qrcode = require('qrcode')
 const fetch = require('node-fetch')
 const fs = require('fs')
+const zlib = require('zlib')
+const crypto = require('crypto')
 
 import logger from '../logger'
 import {FHIR_SERVER} from '../config/config'
 
 let urn
 
+const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 } )
 
 function initializeDDCCOptions() {
   let options = {
@@ -83,8 +87,8 @@ function processDDCCBundle(options) {
   }
   options.ids.Immunization = uuidv4()
   options.ids.ImmunizationRecommendation = uuidv4()
-  options.ids.DocumentReference = uuidv4()
-  options.ids.Composition = uuidv4()
+  //options.ids.DocumentReference = uuidv4()
+  //options.ids.Composition = uuidv4()
   //options.ids.Composition = options.responses.hcid
   return {
     resourceType: "Bundle",	
@@ -94,6 +98,19 @@ function processDDCCBundle(options) {
       createRegistrationEntryPatient(options),
       createRegistrationEntryImmunization(options),
       createRegistrationEntryImmunizationRecommendation(options),
+      //createRegistrationEntryDocumentReferenceQR(options),
+      //createRegistrationEntryComposition(options)
+    ]
+  }    
+}
+
+function processDDCCDocDetails(options) {
+  options.ids.DocumentReference = uuidv4()
+  options.ids.Composition = uuidv4()
+  return {
+    resourceType: "Bundle",	
+    type: "transaction",
+    entry: [
       createRegistrationEntryDocumentReferenceQR(options),
       createRegistrationEntryComposition(options)
     ]
@@ -380,7 +397,7 @@ function createRegistrationEntryImmunization(options) {
   entry.resource.patient = { reference: "Patient/"+options.ids.Patient }
   entry.resource.manufacturer = { identifier: options.responses.manufacturer }
   entry.resource.lotNumber =  options.responses.lot
-  entry.resource.occurenceDateTime = options.responses.date
+  entry.resource.occurrenceDateTime = options.responses.date
   entry.resource.location = { display: options.responses.centre }
   entry.resource.performer =  {
     actor: {
@@ -482,6 +499,68 @@ function processResponses(QResponse,options) {
   return responses
 }
 
+function reverseResponses( immunization, patient, recommendation, hcid ) {
+  let responses = {}
+  try {
+    responses.name = patient.name[0].text
+  } catch ( err ) {}
+  responses.birthDate = patient.birthDate
+  try {
+    responses.identifier = patient.identifier[0].value
+  } catch ( err ) {}
+  responses.sex = patient.gender
+  try {
+    responses.vaccine = immunization.vaccineCode.coding[0]
+  } catch ( err ) {}
+  try {
+    responses.brand = immunization.extension.find( ext => ext.url === "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCVaccineBrand" ).valueCoding
+  } catch ( err ) {}
+  try {
+    responses.manufacturer = immunization.manufacturer.identifier
+  } catch ( err ) {}
+  try {
+    responses.ma_holder = immunization.extension.find( ext => ext.url === "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCVaccineMarketAuthorization" ).valueCoding
+  } catch ( err ) {}
+  responses.lot = immunization.lotNumber
+  responses.date = immunization.occurrenceDateTime
+  try {
+    responses.vaccine_valid = immunization.extension.find( ext => ext.url === "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCVaccineValidFrom" ).valueDateTime
+  } catch ( err ) {}
+  try {
+    responses.dose = immunization.protocolApplied[0].doseNumberPositiveInt
+  } catch ( err ) {}
+  try {
+    responses.total_doses = immunization.protocolApplied[0].seriesDosesPositiveInt
+  } catch ( err ) {}
+  try {
+    responses.country = immunization.extension.find( ext => ext.url === "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCCountryOfVaccination" ).valueCoding
+  } catch ( err ) {}
+  try {
+    responses.centre = immunization.location.display
+  } catch ( err ) {}
+  try {
+    responses.hw = immunization.performer.actor.identifier.value
+  } catch ( err ) {}
+  try {
+    responses.disease = immunization.protocolApplied[0].targetDisease[0].coding[0]
+  } catch ( err ) {}
+  try {
+    responses.due_date = recommendation.recommendation[0].dateCriterion[0].value
+  } catch ( err ) {}
+  try {
+    responses.pha = immunization.protocolApplied[0].authority.identifier.value
+  } catch ( err ) {}
+  responses.hcid = hcid
+  /*
+   * Not sure where to pull this from when pulled from resources
+  responses.valid_from = ""
+  responses.valid_to = ""
+  */
+
+}
+
+
+
 
 
 //one needs to be defined for each questtonnaire handled
@@ -494,9 +573,7 @@ let QResponseProcessors = {
 
 function putPDBEntry(resource) {
   return {
-    resource: {
-      resource
-    },
+    resource,
     request: {
       method: "PUT",
       url: resource.resourceType + "/" + resource.id 
@@ -620,94 +697,120 @@ export const buildHealthCertificate = (
 ) => {
   return new Promise( async (resolve) => {
 
-    if ( DDCCParameters.resourceType !== "Parameters" || !DDCCParameters.parameter ) {
-      resolve( {
-        resourceType: "OperationOutcome",
-        issue: [
-          {
-            severity: "error",
-            code: "required",
-            diagnostics: "Invalid resource submitted."
-          }
-        ]
-      } ) 
+    let QResponse = undefined
+    let addPatient
+    let options
+    if ( DDCCParameters.resourceType === 'QuestionnaireResponse' ) {
+      QResponse = DDCCParameters
+    } else {
+      if ( DDCCParameters.resourceType !== "Parameters" || !DDCCParameters.parameter ) {
+	resolve( {
+	  resourceType: "OperationOutcome",
+	  issue: [
+	    {
+	      severity: "error",
+	      code: "required",
+	      diagnostics: "Invalid resource submitted."
+	    }
+	  ]
+	} ) 
+      }
+
+      let responseParam = DDCCParameters.parameter.find( param => param.name === "response" )
+      let immunizationParam = DDCCParameters.parameter.find( param => param.name === "immunization" )
+      let hcidParam = DDCCParameters.parameter.find( param => param.name === "hcid" )
+      if ( responseParam && responseParam.resource ) {
+	QResponse = responseParam.resource
+	if ( QResponse.resourceType !== "QuestionnaireResponse" ) {
+	  resolve( {
+	    resourceType: "OperationOutcome",
+	    issue: [
+	      {
+		severity: "error",
+		code: "required",
+		diagnostics: "Invalid response resource."
+	      }
+	    ]
+	  } )
+	}
+      } else if ( immunizationParam && immunizationParam.valueReference && immunization.valueReference.reference && hcidParam && hcidParam.valueString ) {
+	QResponse = false
+	let immunization = await retrieveResource(immunizationParam.valueReference.reference)
+	addPatient = await retrieveResource(imm.subject)
+	let recommendation = await retrieveResource("ImmunizationRecommendation?support="+immunizationParam.valueReference.reference)
+	if ( recommendation && recommendation.entry && recommendation.entry.length > 0 ) {
+	  recommendation = recommendation.entry[0].resource
+	}
+	// NEED A BETTER WAY TO DO THIS
+	let options = initializeDDCCOptions()
+	options.responses = reverseResponses(immunization, addPatient, recommendation, hcidParam.valueString)
+
+      } else {
+      	resolve( {
+	  resourceType: "OperationOutcome",
+	  issue: [
+	    {
+	      severity: "error",
+	      code: "required",
+	      diagnostics: "Unable to find response or immunization/hcid parameters."
+	    }
+	  ]
+	} )
+      }
+
     }
-    let parameter = DDCCParameters.parameter.find( param => param.name === "response" )
-    if ( !parameter || !parameter.resource ) {
-      resolve( {
-        resourceType: "OperationOutcome",
-        issue: [
-          {
-            severity: "error",
-            code: "required",
-            diagnostics: "Unable to find response parameter."
-          }
-        ]
-      } )
-    }
-    let QResponse = parameter.resource
-    if ( QResponse.resourceType !== "QuestionnaireResponse" ) {
-      resolve( {
-        resourceType: "OperationOutcome",
-        issue: [
-          {
-            severity: "error",
-            code: "required",
-            diagnostics: "Invalid response resource."
-          }
-        ]
-      } )
+
+    if ( QResponse !== false ) {
+      if ( ! (QResponse.questionnaire in QResponseProcessors)
+	|| ! (QResponse.questionnaire in QResponseInitializers)) {
+	resolve( {
+	  resourceType: "OperationOutcome",
+	  issue: [
+	    {
+	      severity: "error",
+	      code: "required",
+	      diagnostics: "Do not know how to handle " + QResponse.questionnaire  
+	    }
+	  ]
+	} )
+      }
+  
+      options = QResponseInitializers[QResponse.questionnaire]()
+      options.resources.QuestionnaireResponse = QResponse
+      options.responses = processResponses(QResponse,options)
     }
 
 
-    if ( ! (QResponse.questionnaire in QResponseProcessors)
-      || ! (QResponse.questionnaire in QResponseInitializers)) {
-      resolve( {
-        resourceType: "OperationOutcome",
-        issue: [
-          {
-            severity: "error",
-            code: "required",
-            diagnostics: "Do not know how to handle " + QResponse.questionnaire  
-          }
-        ]
-      } )
-    }
-
-    let options = QResponseInitializers[QResponse.questionnaire]()
-    options.resources.QuestionnaireResponse = QResponse
-    options.responses = processResponses(QResponse,options)
     let existingFolder = await retrieveResource("List/"+options.responses.hcid)
     if ( existingFolder && existingFolder.resourceType === "List" ) {
       options.resources.List = existingFolder
     }
-/* version can be related to the questionnaire so taking this out for now.
-    if ( options.responses.version !== options.version ) {
-      resolve( {
-        resourceType: "OperationOutcome",
-        issue: [
-          {
-            severity: "error",
-            code: "required",
-            diagnostics: "Invalid version."
-          }
-        ]
-      } )
-    }
-    */
+
 
     //Need to verify that this is what we want to stringify. (for discussion)
-    options.content64['QR'] = Buffer.from(JSON.stringify(QResponse.item)).toString('base64') 
+    options.content64['QR'] = Buffer.from(JSON.stringify(options.responses)).toString('base64') 
 
     //in future should have all the QR codes generated (e.g. DGC, ICAO)
-    let canvasElementQR = canvas.createCanvas(400,400);
-    let QRContentCBOR = cbor.encode(QResponse.item)
-    let QRCBOR45 = base45.encode(QRContentCBOR)
+    const headers = {
+      'p': {'alg': 'ES256'},
+      'u': {'kid': '11'}
+    }
+    const signer = {
+      'key': {
+	'd': Buffer.from('6c1382765aec5358f117733d281c1c7bdc39884d04a45a1e6c67c858bc206c19', 'hex')
+      }
+    }
 
-    qrcode.toCanvas( canvasElementQR , QRCBOR45, { errorCorrectionLevel: 'Q' } ).then(
+    let canvasElementQR = canvas.createCanvas(400,400);
+    let QRContentCBOR = cbor.encode(options.responses)
+    let QRContentCOSE = await cose.sign.create( headers, QRContentCBOR, signer )
+    let QRContentCOSEZlib = zlib.deflateSync(QRContentCOSE)
+    let QRCOSE45 = base45.encode(QRContentCOSEZlib)
+
+    qrcode.toCanvas( canvasElementQR , QRCOSE45, { errorCorrectionLevel: 'Q' } ).then(
       async( canvasElementQR ) => {
         const ctxQR = canvasElementQR.getContext('2d')
-        let watermark = 'WHO-DDCC: ' + options.ids.DocumentReference //this is the hcid
+        let watermark = 'WHO-DDCC: ' + options.responses.hcid //this is the hcid
         let xoff = Math.max(0,Math.floor ( (canvasElementQR.width - ctxQR.measureText(watermark).width) / 2))
         ctxQR.fillText(watermark, xoff ,10)
 
@@ -742,65 +845,76 @@ export const buildHealthCertificate = (
         logger.info('a4')
 
 
-        let addBundle = QResponseProcessors[QResponse.questionnaire](options)
+	if ( QResponse !== false ) {
+	  let addBundle = QResponseProcessors[QResponse.questionnaire](options)
 
-	let addPatient = addBundle.entry.find( entry => entry.resource.resourceType === 'Patient' )
-	if ( addPatient && addPatient.resource ) {
-	  options.resources.Patient = addPatient.resource
-	} else {
-	  resolve( {
-	    resourceType: "OperationOutcome",
-	    issue: [
-	      {
-		severity: "error",
-		code: "exception",
-		diagnostics: "Missing Patient in addBundle."
-	      }
-	    ]
-	  } )
+	  addPatient = addBundle.entry.find( entry => entry.resource.resourceType === 'Patient' )
+	  if ( addPatient && addPatient.resource ) {
+	    options.resources.Patient = addPatient.resource
+	  } else {
+	    resolve( {
+	      resourceType: "OperationOutcome",
+	      issue: [
+		{
+		  severity: "error",
+		  code: "exception",
+		  diagnostics: "Missing Patient in addBundle."
+		}
+	      ]
+	    } )
+	  }
+
+	  try {
+	    let res = await fetch( FHIR_SERVER, {
+	      method: 'POST',
+	      body: JSON.stringify( addBundle ),
+	      headers: { 'Content-Type': 'application/fhir+json' }
+	    } )
+	    let json = await res.json()
+	  } catch( err ) {
+	    resolve( {
+	      resourceType: "OperationOutcome",
+	      issue: [
+		{
+		  severity: "error",
+		  code: "exception",
+		  diagnostics: err.message
+		}
+	      ]
+	    } )
+	  } 
+
 	}
 
-        /*
-  let QRCode = {
-    resourceType: "Binary"
-  }
-  let QRContent = {
-    resourceType: "QuestionnaireResponse"
-  }
-  let certificateUri = ""
-  let returnParameters = {
-    resourceType: "Parameters",
-    parameter: [
-      {
-        name: "qr-code",
-        resource: QRCode
-      },
-      {
-        name: "qr-content",
-        resource: QRContent
-      },
-      {
-        name: "certificate",
-        valueUri: certificateUri
-      }
-    ]
-  }
-  */
+	let addDocDetails = processDDCCDocDetails(options)
 
-        fetch( FHIR_SERVER, {
-          method: 'POST',
-          body: JSON.stringify( addBundle ),
-          headers: { 'Content-Type': 'application/fhir+json' }
-        } )
-          .then( res => res.json() ).then( json => {
+	fetch( FHIR_SERVER, {
+	  method: 'POST',
+	  body: JSON.stringify( addDocDetails ),
+	  headers: { 'Content-Type': 'application/fhir+json' }
+	} )
+	  .then( res => res.json() ).then( json => {
 
-            fetch( FHIR_SERVER + "Composition/" + options.responses.hcid + "/$document" )
-              .then( res => res.json() ).then( doc => {
+	    fetch( FHIR_SERVER + "Composition/" + options.ids.Composition + "/$document" )
+	      .then( res => res.json() ).then( doc => {
 
 
 		let docId = uuidv4()
 		doc.id = docId
-		fetch( FHIR_SERVER + "Document/"+docId, {
+
+		let docBuffer = Buffer.from(JSON.stringify(doc))
+		let sign = crypto.sign("SHA256", docBuffer, privateKey )
+		doc.signature = {
+		  type: [ {
+		    system: "urn:iso-astm:E1762-95:2013",
+		    code: "1.2.840.10065.1.12.1.5"
+		  } ],
+		  when: options.now,
+		  who: { identifier: { value: options.responses.hcid } },
+		  data: sign.toString('base64')
+		}
+
+		fetch( FHIR_SERVER + "Bundle/"+docId, {
 		  method: 'PUT',
 		  body: JSON.stringify( doc ),
 		  headers: { 'Content-Type': 'application/fhir+json' }
@@ -823,34 +937,35 @@ export const buildHealthCertificate = (
 		} )
 
 
-              } )
-              .catch( err => {
-                resolve( {
-                  resourceType: "OperationOutcome",
-                  issue: [
-                    {
-                      severity: "error",
-                      code: "exception",
-                      diagnostics: err.message
-                    }
-                  ]
-                } )
-              } )
-          } )
-          .catch( err => {
-            resolve( {
-              resourceType: "OperationOutcome",
-              issue: [
-                {
-                  severity: "error",
-                  code: "exception",
-                  diagnostics: err.message
-                }
-              ]
-            } )
-          } )
+	      } )
+	      .catch( err => {
+		resolve( {
+		  resourceType: "OperationOutcome",
+		  issue: [
+		    {
+		      severity: "error",
+		      code: "exception",
+		      diagnostics: err.message
+		    }
+		  ]
+		} )
+	      } )
+	  } )
+	  .catch( err => {
+	    resolve( {
+	      resourceType: "OperationOutcome",
+	      issue: [
+		{
+		  severity: "error",
+		  code: "exception",
+		  diagnostics: err.message
+		}
+	      ]
+	    } )
+	  } )
 
-        //resolve( addBundle )
+	//resolve( addBundle )
+
       } ).catch( err => {
         resolve( {
           resourceType: "OperationOutcome",
