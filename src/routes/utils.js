@@ -595,14 +595,21 @@ function postPDBEntry(resourceType,tempId) {
 
 function createPDBSubmissionSet( options, docRefId ) {
   let entry = postPDBEntry( "List", uuidv4() )
+  entry.resource.identifier = [
+    {
+      use: "usual",
+      system: "http://worldhealthorganization.github.io/ddcc/SubmissionSet",
+      value: entry.resource.id
+    }
+  ]
   entry.resource.subject = { reference: "Patient/" + options.resources.Patient.id }
   entry.resource.status = "current"
   entry.resource.mode = "working"
   entry.resource.code = {
     coding: [
       {
-	system: "http://profiles.ihe.net/ITI/MHD/CodeSystem/MHDlistTypes",
-	code: "submissionset"
+        system: "http://profiles.ihe.net/ITI/MHD/CodeSystem/MHDlistTypes",
+        code: "submissionset"
       }
     ]
   }
@@ -643,15 +650,40 @@ function createPDBFolder( options, docRefId ) {
     let resource = {
       resourceType: "List",
       id: options.responses.hcid,
+      extension: [
+        {
+          url: "http://profiles.ihe.net/ITI/MHD/StructureDefinition/ihe-designationType",
+          valueCodeableConcept: {
+            coding: [
+              {
+                system: "http://worldhealthorganization.github.io/ddcc/CodeSystem/DDCC-Folder-DesignationType",
+                code: "ddcc"
+              }
+            ]
+          }
+        }
+      ],
+      identifier: [
+        {
+          use: "usual",
+          system: "http://worldhealthorganization.github.io/ddcc/Folder",
+          value: options.responses.hcid
+        },
+        {
+          use: "official",
+          system: "http://worldhealthorganization.github.io/ddcc/Folder",
+          value: options.responses.hcid
+        }
+      ],
       status: "current",
       mode: "working",
       code: {
-	coding: [
-	  {
-	    system: "http://profiles.ihe.net/ITI/MHD/CodeSystem/MHDlistTypes",
-	    code: "folder"
-	  }
-	]
+        coding: [
+          {
+            system: "http://profiles.ihe.net/ITI/MHD/CodeSystem/MHDlistTypes",
+            code: "folder"
+          }
+        ]
       },
       subject: { reference: "Patient/" + options.resources.Patient.id },
       date: options.now,
