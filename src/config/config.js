@@ -13,3 +13,7 @@ export const TRUST_SELF_SIGNED = process.env.TRUST_SELF_SIGNED === 'true'
 
 // FHIR server
 export const FHIR_SERVER = process.env.FHIR_SERVER || 'http://localhost:8081/fhir/'
+
+// DHS FHIR server
+export const DHS_FHIR_SERVER = process.env.DHS_FHIR_SERVER || undefined
+export const DHS_QUERY = process.env.DHS_QUERY || "Immunization?target-disease=840539006&_lastUpdated=gt"
