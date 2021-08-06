@@ -970,7 +970,6 @@ function createProvideDocumentBundle(doc, options) {
     })
       .then((res) => res.json())
       .then((json) => {
-        console.log(json)
         logger.info("Saved provideDocumentBundle.")
       })
       .catch((err) => {
@@ -1375,7 +1374,7 @@ function pingDHS() {
     })
     .catch((err) => {
       pingDHSFailures++
-      console.log(err)
+      logger.info(err.message)
       logger.info("FAILED to retrieve DHS Query " + pingDHSFailures)
       if (pingDHSFailures > 10) {
         logger.info("Too many DHS failures in a row so stopping.")
