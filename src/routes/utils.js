@@ -16,6 +16,7 @@ const crypto = require("crypto")
 const FOLDER_IDENTIFIER_SYSTEM = "http://worldhealthorganization.github.io/ddcc/Folder"
 const SUBMISSIONSET_IDENTIFIER_SYSTEM = "http://worldhealthorganization.github.io/ddcc/SubmissionSet"
 
+import { createDDCC, createQRPDF } from "./createPDF"
 import logger from "../logger"
 import { FHIR_SERVER, DHS_FHIR_SERVER, DHS_QUERY } from "../config/config"
 import { doc } from "prettier"
@@ -63,6 +64,7 @@ function initializeDDCCOptions() {
     responses: {},
     ids: {},
     images: {},
+    pdfs: {},
     dataURLs: {},
     content64: {}
   }
@@ -357,6 +359,16 @@ function createRegistrationEntryDocumentReferenceQR(options) {
         system: "https://WorldHealthOrganization.github.io/ddcc/CodeSystem/DDCC-QR-Format-CodeSystem",
         code: "serialized"
       }
+    },
+    {
+      attachment: {
+        contentType: "application/pdf",
+        data: options.pdfs.QR
+      },
+      format: {
+        system: "https://WorldHealthOrganization.github.io/ddcc/CodeSystem/DDCC-QR-Format-CodeSystem",
+        code: "pdf"
+      }
     }
   ]
   return entry
@@ -577,12 +589,12 @@ function reverseResponses(immunization, patient, recommendation, hcid) {
   return responses
 }
 
-function addQResponseItem( linkId, answerType, answer ) {
+function addQResponseItem(linkId, answerType, answer) {
   return {
     linkId: linkId,
     answer: [
       {
-        ["value"+answerType]: answer
+        ["value" + answerType]: answer
       }
     ]
   }
@@ -597,66 +609,123 @@ function reverseQuestionnaireResponse(questionnaireUrl, immunization, patient, r
     item: []
   }
   try {
-    response.item.push( 
-      addQResponseItem( "name", "String", patient.name[0].text || patient.name[0].given.join(" ") + " " + patient.name[0].family)
+    response.item.push(
+      addQResponseItem(
+        "name",
+        "String",
+        patient.name[0].text || patient.name[0].given.join(" ") + " " + patient.name[0].family
+      )
     )
   } catch (err) {}
-  response.item.push( addQResponseItem( "birthDate", "Date", patient.birthDate ) )
+  response.item.push(addQResponseItem("birthDate", "Date", patient.birthDate))
   try {
-    response.item.push( addQResponseItem( "identifier", "String", patient.identifier[0].value ) )
+    response.item.push(addQResponseItem("identifier", "String", patient.identifier[0].value))
   } catch (err) {}
-  response.item.push( addQResponseItem( "sex", "Coding", { code: patient.gender, system: "http://hl7.org/fhir/administrative-gender" } ) )
+  response.item.push(
+    addQResponseItem("sex", "Coding", { code: patient.gender, system: "http://hl7.org/fhir/administrative-gender" })
+  )
   try {
-    response.item.push( addQResponseItem( "vaccine", "Coding", immunization.vaccineCode.coding[0] ) )
-  } catch (err) {}
-  try {
-    response.item.push( addQResponseItem( "brand", "Coding",  immunization.extension.find(
-      (ext) => ext.url === "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCVaccineBrand"
-    ).valueCoding ) )
+    response.item.push(addQResponseItem("vaccine", "Coding", immunization.vaccineCode.coding[0]))
   } catch (err) {}
   try {
-    response.item.push( addQResponseItem( "manufacturer", "Coding",  immunization.manufacturer.identifier || immunization.manufacturer.reference ) )
+    response.item.push(
+      addQResponseItem(
+        "brand",
+        "Coding",
+        immunization.extension.find(
+          (ext) => ext.url === "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCVaccineBrand"
+        ).valueCoding
+      )
+    )
   } catch (err) {}
   try {
-    response.item.push( addQResponseItem( "ma_holder", "Coding", immunization.extension.find(
-      (ext) =>
-        ext.url === "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCVaccineMarketAuthorization"
-    ).valueCoding ) )
-  } catch (err) {}
-  response.item.push( addQResponseItem( "lot", "String", immunization.lotNumber ) )
-  response.item.push( addQResponseItem( "date", "Date", immunization.occurrenceDateTime ) )
-  try {
-    response.item.push( addQResponseItem( "vaccine_valid", "Date", immunization.extension.find(
-      (ext) => ext.url === "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCVaccineValidFrom"
-    ).valueDateTime ) )
+    response.item.push(
+      addQResponseItem(
+        "manufacturer",
+        "Coding",
+        immunization.manufacturer.identifier || immunization.manufacturer.reference
+      )
+    )
   } catch (err) {}
   try {
-    response.item.push( addQResponseItem( "dose", "Integer", immunization.protocolApplied[0].doseNumberPositiveInt ) )
+    response.item.push(
+      addQResponseItem(
+        "ma_holder",
+        "Coding",
+        immunization.extension.find(
+          (ext) =>
+            ext.url ===
+            "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCVaccineMarketAuthorization"
+        ).valueCoding
+      )
+    )
+  } catch (err) {}
+  response.item.push(addQResponseItem("lot", "String", immunization.lotNumber))
+  response.item.push(addQResponseItem("date", "Date", immunization.occurrenceDateTime))
+  try {
+    response.item.push(
+      addQResponseItem(
+        "vaccine_valid",
+        "Date",
+        immunization.extension.find(
+          (ext) => ext.url === "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCVaccineValidFrom"
+        ).valueDateTime
+      )
+    )
   } catch (err) {}
   try {
-    response.item.push( addQResponseItem( "total_doses", "Integer", immunization.protocolApplied[0].seriesDosesPositiveInt ) )
+    response.item.push(addQResponseItem("dose", "Integer", immunization.protocolApplied[0].doseNumberPositiveInt))
   } catch (err) {}
   try {
-    response.item.push( addQResponseItem( "country", "Coding", immunization.extension.find(
-      (ext) => ext.url === "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCCountryOfVaccination"
-    ).valueCoding ) )
+    response.item.push(
+      addQResponseItem("total_doses", "Integer", immunization.protocolApplied[0].seriesDosesPositiveInt)
+    )
   } catch (err) {}
   try {
-    response.item.push( addQResponseItem( "centre", "String", immunization.location.display || immunization.location.reference ) )
+    response.item.push(
+      addQResponseItem(
+        "country",
+        "Coding",
+        immunization.extension.find(
+          (ext) =>
+            ext.url === "https://WorldHealthOrganization.github.io/ddcc/StructureDefinition/DDCCCountryOfVaccination"
+        ).valueCoding
+      )
+    )
   } catch (err) {}
   try {
-    response.item.push( addQResponseItem( "hw", "String", immunization.performer.actor.reference || immunization.performer.actor.identifier.value ) )
+    response.item.push(
+      addQResponseItem("centre", "String", immunization.location.display || immunization.location.reference)
+    )
   } catch (err) {}
   try {
-    response.item.push( addQResponseItem( "disease", "Coding", immunization.protocolApplied[0].targetDisease[0].coding[0] ) )
+    response.item.push(
+      addQResponseItem(
+        "hw",
+        "String",
+        immunization.performer.actor.reference || immunization.performer.actor.identifier.value
+      )
+    )
   } catch (err) {}
   try {
-    response.item.push( addQResponseItem( "due_date", "Date", recommendation.recommendation[0].dateCriterion[0].value ) )
+    response.item.push(
+      addQResponseItem("disease", "Coding", immunization.protocolApplied[0].targetDisease[0].coding[0])
+    )
   } catch (err) {}
   try {
-    response.item.push( addQResponseItem( "pha", "String", immunization.protocolApplied[0].authority.reference || immunization.protocolApplied[0].authority.identifier.value ) )
+    response.item.push(addQResponseItem("due_date", "Date", recommendation.recommendation[0].dateCriterion[0].value))
   } catch (err) {}
-  response.item.push( addQResponseItem( "hcid", "String", hcid ) )
+  try {
+    response.item.push(
+      addQResponseItem(
+        "pha",
+        "String",
+        immunization.protocolApplied[0].authority.reference ||
+          immunization.protocolApplied[0].authority.identifier.value
+      )
+    )
+  } catch (err) {}
+  response.item.push(addQResponseItem("hcid", "String", hcid))
   /*
    * Not sure where to pull this from when pulled from resources
   responses.valid_from = ""
@@ -695,7 +764,7 @@ function postPDBEntry(resourceType, tempId) {
   }
 }
 
-function createPDBSubmissionSet(options, docRefId) {
+function createPDBSubmissionSet(options, folderId, docRefId, binaryRefId) {
   let entry = postPDBEntry("List", uuidv4())
   entry.resource.identifier = [
     {
@@ -723,12 +792,73 @@ function createPDBSubmissionSet(options, docRefId) {
       item: { reference: "urn:uuid:" + docRefId }
     },
     {
-      item: { reference: "List/" + options.responses.hcid }
+      item: { reference: "urn:uuid:" + binaryRefId }
+    },
+    {
+      item: { reference: "List/" + folderId }
     }
   ]
   return entry
 }
 
+function createPDBBinaryReference(options, binaryRefId, binaryId) {
+  let entry = postPDBEntry("DocumentReference", binaryRefId)
+  entry.resource.status = "current"
+  entry.resource.subject = {
+    reference: "Patient/" + options.resources.Patient.id
+  }
+  entry.resource.date = options.now
+  entry.resource.content = [
+    {
+      attachment: {
+        contentType: "application/pdf",
+        url: "urn:uuid:" + binaryId
+      }
+    }
+  ]
+  return entry
+}
+
+function createPDBPDF(options) {
+  // This still needs to process options.resources.List to look for previous DocRefs it can retrieve
+  let details = {
+    hcid: options.responses.hcid,
+    name: options.responses.name,
+    site: options.responses.centre,
+    id: options.responses.identifier,
+    sex: options.responses.gender,
+    birthDate: options.responses.birthDate
+  }
+  let dose = {
+    date: options.responses.date,
+    lot: options.responses.lot,
+    vaccine: options.responses.vaccine.display || options.responses.vaccine.code,
+    hw: options.responses.hw,
+    qr: options.images.QR
+  }
+  if (options.responses.dose === 1) {
+    details.dose1 = dose
+    if (details.total_doses > 1) {
+      details.dose1.second = true
+    } else {
+      details.dose1.second = false
+    }
+    if (options.responses.due_date) {
+      details.dose1.date_due = options.responses.due_date
+    }
+  } else if (options.responses.dose === 2) {
+    details.dose2 = dose
+  }
+  return createDDCC(details)
+}
+
+function createPDBBinary(options, binaryId) {
+  let entry = postPDBEntry("Binary", binaryId)
+
+  entry.resource.contentType = "application/pdf"
+  entry.resource.data = options.pdfs.DDCC
+  return entry
+}
 function createPDBDocumentReference(options, docRefId, docId) {
   let entry = postPDBEntry("DocumentReference", docRefId)
   entry.resource.status = "current"
@@ -747,7 +877,7 @@ function createPDBDocumentReference(options, docRefId, docId) {
   return entry
 }
 
-function createPDBFolder(options, docRefId) {
+function createPDBFolder(options, folderId, docRefId, binaryRefId) {
   let entry
   if (options.resources.List) {
     entry = putPDBEntry(options.resources.List)
@@ -755,7 +885,7 @@ function createPDBFolder(options, docRefId) {
   } else {
     let resource = {
       resourceType: "List",
-      id: uuidv4(),
+      id: folderId,
       extension: [
         {
           url: "http://profiles.ihe.net/ITI/MHD/StructureDefinition/ihe-designationType",
@@ -800,35 +930,53 @@ function createPDBFolder(options, docRefId) {
   entry.resource.entry.push({
     item: { reference: "urn:uuid:" + docRefId }
   })
+  entry.resource.entry.push({
+    item: { reference: "urn:uuid:" + binaryRefId }
+  })
   return entry
 }
 
 function createProvideDocumentBundle(doc, options) {
   let docRefId = uuidv4()
-  let provideDocumentBundle = {
-    resourceType: "Bundle",
-    type: "transaction",
-    entry: [
-      createPDBSubmissionSet(options, docRefId),
-      createPDBDocumentReference(options, docRefId, doc.id),
-      createPDBFolder(options, docRefId),
-      putPDBEntry(options.resources.Patient)
-    ]
+  let binaryRefId = uuidv4()
+  let binaryId = uuidv4()
+  let folderId
+  if ( options.resources.List ) {
+    folderId = options.resources.List.id
+  } else {
+    folderId = uuidv4()
   }
+  createPDBPDF(options).then((pdf) => {
+    options.pdfs.DDCC = Buffer.from(pdf).toString('base64')
 
-  // Should change this to the a different config in case the registry is somewhere else.
-  fetch(FHIR_SERVER, {
-    method: "POST",
-    body: JSON.stringify(provideDocumentBundle),
-    headers: { "Content-Type": "application/fhir+json" }
+    let provideDocumentBundle = {
+      resourceType: "Bundle",
+      type: "transaction",
+      entry: [
+        createPDBSubmissionSet(options, folderId, docRefId, binaryRefId),
+        createPDBDocumentReference(options, docRefId, doc.id),
+        createPDBBinary(options, binaryId),
+        createPDBBinaryReference(options, binaryRefId, binaryId),
+        createPDBFolder(options, folderId, docRefId, binaryRefId),
+        putPDBEntry(options.resources.Patient)
+      ]
+    }
+
+    // Should change this to the a different config in case the registry is somewhere else.
+    fetch(FHIR_SERVER, {
+      method: "POST",
+      body: JSON.stringify(provideDocumentBundle),
+      headers: { "Content-Type": "application/fhir+json" }
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        console.log(json)
+        logger.info("Saved provideDocumentBundle.")
+      })
+      .catch((err) => {
+        logger.error(err.message)
+      })
   })
-    .then((res) => res.json())
-    .then((json) => {
-      logger.info("Saved provideDocumentBundle.")
-    })
-    .catch((err) => {
-      logger.error(err.message)
-    })
 }
 
 export const buildHealthCertificate = (DDCCParameters) => {
@@ -975,6 +1123,10 @@ function compileHealthCertificate(options, QResponse) {
 
         options.images = processAttachments(options)
         options.divs = processDivs(options)
+        for (let idx in options.images) {
+          let pdf = await createQRPDF(options.images[idx])
+          options.pdfs[idx] = Buffer.from(pdf).toString("base64")
+        }
 
         //logger.info('a0' )
         let imgoptions = {
@@ -992,7 +1144,7 @@ function compileHealthCertificate(options, QResponse) {
           Math.max(options.height, canvasElementQR.height)
         )
         const ctx = canvasElement.getContext("2d")
-        logger.info("a2")
+        //logger.info("a2")
         ctx.fillStyle = "white"
         ctx.fillRect(0, 0, canvasElement.width, canvasElement.height)
         ctx.drawImage(canvasElementQR, options.width + 20, 0)
@@ -1006,7 +1158,7 @@ function compileHealthCertificate(options, QResponse) {
           0
         )
         //ctx.putImageData(textDivImage,10,0)
-        logger.info("a4")
+        //logger.info("a4")
 
         if (QResponse !== false) {
           let addBundle = QResponseProcessors[QResponse.questionnaire](options)
