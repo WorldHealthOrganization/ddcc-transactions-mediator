@@ -936,7 +936,7 @@ function createPDBFolder(options, folderId, docRefId, binaryRefId) {
   return entry
 }
 
-function createProvideDocumentBundle(doc, options) {
+function createProvideDocumentBundle(doc, options, DHSUpdate) {
   let docRefId = uuidv4()
   let binaryRefId = uuidv4()
   let binaryId = uuidv4()
@@ -949,14 +949,19 @@ function createProvideDocumentBundle(doc, options) {
   createPDBPDF(options).then((pdf) => {
     options.pdfs.DDCC = Buffer.from(pdf).toString('base64')
 
+
+    let PDBBinary = createPDBBinary(options, binaryId)
+    let PDBBinaryReference = createPDBBinaryReference(options, binaryRefId, binaryId)
+
+
     let provideDocumentBundle = {
       resourceType: "Bundle",
       type: "transaction",
       entry: [
         createPDBSubmissionSet(options, folderId, docRefId, binaryRefId),
         createPDBDocumentReference(options, docRefId, doc.id),
-        createPDBBinary(options, binaryId),
-        createPDBBinaryReference(options, binaryRefId, binaryId),
+        PDBBinary,
+        PDBBinaryReference,
         createPDBFolder(options, folderId, docRefId, binaryRefId),
         putPDBEntry(options.resources.Patient)
       ]
@@ -975,10 +980,33 @@ function createProvideDocumentBundle(doc, options) {
       .catch((err) => {
         logger.error(err.message)
       })
+
+    if ( DHSUpdate ) {
+      let DHSBundle = {
+        resourceType: "Bundle",
+        type: "transaction",
+        entry: [
+          PDBBinary,
+          PDBBinaryReference
+        ]
+      }
+      fetch( DHSUpdate, {
+        method: "POST",
+        body: JSON.stringify(DHSBUndle),
+        headers: { "Content-Type": "application/fhir+json" }
+      })
+        .then((res) => res.json())
+        .then((json) => {
+          logger.info("Saved Binary to DHS Server.")
+        })
+        .catch((err) => {
+          logger.error(err.message)
+        })
+    }
   })
 }
 
-export const buildHealthCertificate = (DDCCParameters) => {
+export const buildHealthCertificate = (DDCCParameters, DHSUpdate) => {
   return new Promise(async (resolve) => {
     let QResponse = undefined
     let options
@@ -1067,13 +1095,13 @@ export const buildHealthCertificate = (DDCCParameters) => {
       options.responses = processResponses(QResponse, options)
     }
 
-    compileHealthCertificate(options, QResponse).then((results) => {
+    compileHealthCertificate(options, QResponse, DHSUpdate).then((results) => {
       resolve(results)
     })
   })
 }
 
-function compileHealthCertificate(options, QResponse) {
+function compileHealthCertificate(options, QResponse, DHSUpdate) {
   return new Promise(async (resolve) => {
     let existingFolder = await retrieveResource(
       "List?identifier=" + FOLDER_IDENTIFIER_SYSTEM + "|" + options.responses.hcid
@@ -1235,7 +1263,7 @@ function compileHealthCertificate(options, QResponse) {
                 })
                   .then((res) => res.json())
                   .then((docAdded) => {
-                    createProvideDocumentBundle(doc, options)
+                    createProvideDocumentBundle(doc, options, DHSUpdate)
 
                     resolve(doc)
                   })
@@ -1351,7 +1379,7 @@ function pingDHS() {
             // NEED A BETTER WAY TO DO THIS
             //let options = initializeDDCCOptions()
             //options.responses = reverseResponses(immunization, addPatient, recommendation, addPatient.identifier[0].value )
-            buildHealthCertificate(QResponse).then((results) => {
+            buildHealthCertificate(QResponse, DHS_FHIR_SERVER).then((results) => {
               if (results.resourceType === "Bundle" && results.type === "document") {
                 fetch(DHS_FHIR_SERVER + "Bundle/" + results.id, {
                   method: "PUT",
