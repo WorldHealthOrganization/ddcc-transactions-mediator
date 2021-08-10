@@ -1,3 +1,5 @@
+import logger from "../logger"
+
 const { PDFDocument, StandardFonts, rgb, setFillingGrayscaleColor } = require('pdf-lib')
 const fontkit = require('@pdf-lib/fontkit')
 const JsBarcode = require('jsbarcode')
@@ -16,6 +18,7 @@ const PDF_DEFAULTS = {
 
 const addPng = async ( pdfDoc, page, content, scale, x, y, width, height ) => {
     //const png = fs.readFileSync( FILEPATH + filename)
+    if ( !content ) return
     const buff = Buffer.from( content, 'base64')
     const pngImage = await pdfDoc.embedPng(buff)
 
@@ -31,6 +34,7 @@ const addPng = async ( pdfDoc, page, content, scale, x, y, width, height ) => {
 
 const addBarcode = async ( pdfDoc, page, id, height, width, x, y ) => {
     return new Promise( (resolve, reject) => {
+        if ( !id ) return resolve()
         JsBarcode( canvas, id, { height: height, width: width, displayValue: true, lineColor: "#444444", fontSize: 10 } )
         const stream = canvas.createPNGStream()
         toArray( stream, async(err, arr) => {
@@ -59,7 +63,7 @@ const addBarcode = async ( pdfDoc, page, id, height, width, x, y ) => {
 }
 
 const drawText = ( page, content, font, x, y, size, color ) => {
-
+    if ( !content ) return
     const defaultSize = 32
     const defaultColor = rgb( 0, 0, 0 )
     if ( !size ) size = defaultSize
@@ -75,6 +79,7 @@ const drawText = ( page, content, font, x, y, size, color ) => {
 }
  
 const drawDate = ( page, date, font, x, y, color ) => {
+    if ( !date ) return
     let digits = date.split('')
     drawText( page, digits[5], font, x, y, null, color )
     drawText( page, digits[6], font, x+40, y, null, color )
@@ -88,7 +93,7 @@ const drawDate = ( page, date, font, x, y, color ) => {
 
 
 export const createDDCC = (details) => {
-
+    console.log(details)
     return new Promise( async(resolve, reject) => {
         const pdfDoc = await PDFDocument.create()
 

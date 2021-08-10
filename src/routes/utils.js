@@ -992,12 +992,13 @@ function createProvideDocumentBundle(doc, options, DHSUpdate) {
       }
       fetch( DHSUpdate, {
         method: "POST",
-        body: JSON.stringify(DHSBUndle),
+        body: JSON.stringify(DHSBundle),
         headers: { "Content-Type": "application/fhir+json" }
       })
         .then((res) => res.json())
         .then((json) => {
           logger.info("Saved Binary to DHS Server.")
+          console.log(json)
         })
         .catch((err) => {
           logger.error(err.message)
