@@ -63,6 +63,7 @@ function initializeDDCCOptions() {
     },
     responses: {},
     ids: {},
+    remote_ids: {},
     images: {},
     pdfs: {},
     dataURLs: {},
@@ -330,6 +331,7 @@ function createRegistrationEntryComposition(options) {
 function createRegistrationEntryDocumentReferenceQR(options) {
   let entry = createRegistrationEntry(options, "DocumentReference")
   entry.resource.status = "current"
+  entry.resource.description = "QR code for Covid 19 Immunization"
   entry.resource.category = {
     coding: [
       {
@@ -386,6 +388,13 @@ function createRegistrationEntryPatient(options) {
       value: options.responses.identifier
     }
   ]
+  if ( options.remote_ids.Patient ) {
+    entry.resource.identifier.push( {
+      system: DHS_FHIR_SERVER,
+      value: options.remote_ids.Patient
+    })
+  }
+
   entry.resource.birthDate = options.responses.birthDate
   entry.resource.gender = options.responses.sex
   return entry
@@ -411,6 +420,12 @@ function createRegistrationEntryImmunization(options) {
       valueDateTime: options.responses.vaccine_valid
     }
   ]
+  if ( options.remote_ids.Immunization ) {
+    entry.resource.identifier = [ {
+      system: DHS_FHIR_SERVER,
+      value: options.remote_ids.Immunization
+    } ]
+  }
   entry.resource.status = "completed"
   entry.resource.vaccineCode = {
     coding: [options.responses.vaccine]
@@ -446,6 +461,12 @@ function createRegistrationEntryImmunization(options) {
 
 function createRegistrationEntryImmunizationRecommendation(options) {
   let entry = createRegistrationEntry(options, "ImmunizationRecommendation")
+  if ( options.remote_ids.ImmunizationRecommendation ) {
+    entry.resource.identifier = [{
+      system: DHS_FHIR_SERVER,
+      value: options.remote_ids.ImmunizationRecommendation
+    } ]
+  }
   entry.resource.patient = { reference: "Patient/" + options.ids.Patient }
   entry.resource.date = options.responses.date
 
@@ -703,7 +724,7 @@ function reverseQuestionnaireResponse(questionnaireUrl, immunization, patient, r
       addQResponseItem(
         "hw",
         "String",
-        immunization.performer.actor.reference || immunization.performer.actor.identifier.value
+        immunization.performer[0].actor.reference || immunization.performer[0].actor.identifier.value
       )
     )
   } catch (err) {}
@@ -824,25 +845,24 @@ function createPDBPDF(options) {
   let details = {
     hcid: options.responses.hcid,
     name: options.responses.name,
-    site: options.responses.centre,
     id: options.responses.identifier,
-    sex: options.responses.gender,
+    sex: options.responses.sex.code,
     birthDate: options.responses.birthDate
   }
   let dose = {
     date: options.responses.date,
     lot: options.responses.lot,
     vaccine: options.responses.vaccine.display || options.responses.vaccine.code,
+    brand: options.responses.brand,
+    manufacturer: options.responses.manufacturer,
     hw: options.responses.hw,
+    site: options.responses.centre,
+    country: options.responses.country,
+    doses = options.responses.total_doses,
     qr: options.images.QR
   }
   if (options.responses.dose === 1) {
     details.dose1 = dose
-    if (details.total_doses > 1) {
-      details.dose1.second = true
-    } else {
-      details.dose1.second = false
-    }
     if (options.responses.due_date) {
       details.dose1.date_due = options.responses.due_date
     }
@@ -951,7 +971,7 @@ function createProvideDocumentBundle(doc, options, DHSUpdate) {
 
 
     let PDBBinary = createPDBBinary(options, binaryId)
-    let PDBBinaryReference = createPDBBinaryReference(options, binaryRefId, binaryId)
+    
 
 
     let provideDocumentBundle = {
@@ -961,7 +981,7 @@ function createProvideDocumentBundle(doc, options, DHSUpdate) {
         createPDBSubmissionSet(options, folderId, docRefId, binaryRefId),
         createPDBDocumentReference(options, docRefId, doc.id),
         PDBBinary,
-        PDBBinaryReference,
+        createPDBBinaryReference(options, binaryRefId, binaryId),
         createPDBFolder(options, folderId, docRefId, binaryRefId),
         putPDBEntry(options.resources.Patient)
       ]
@@ -982,6 +1002,11 @@ function createProvideDocumentBundle(doc, options, DHSUpdate) {
       })
 
     if ( DHSUpdate ) {
+      let PDBBinaryReference = createPDBBinaryReference(options, binaryRefId, binaryId)
+      PDBBinaryReference.resource.subject = {
+        reference: "Patient/" + options.remote_ids.Patient
+      }
+      PDBBinaryReference.description = "PDF of DDCC:VS"
       let DHSBundle = {
         resourceType: "Bundle",
         type: "transaction",
@@ -998,7 +1023,6 @@ function createProvideDocumentBundle(doc, options, DHSUpdate) {
         .then((res) => res.json())
         .then((json) => {
           logger.info("Saved Binary to DHS Server.")
-          console.log(json)
         })
         .catch((err) => {
           logger.error(err.message)
@@ -1007,7 +1031,7 @@ function createProvideDocumentBundle(doc, options, DHSUpdate) {
   })
 }
 
-export const buildHealthCertificate = (DDCCParameters, DHSUpdate) => {
+export const buildHealthCertificate = (DDCCParameters, DHSUpdate, originalIds) => {
   return new Promise(async (resolve) => {
     let QResponse = undefined
     let options
@@ -1095,6 +1119,9 @@ export const buildHealthCertificate = (DDCCParameters, DHSUpdate) => {
       options.resources.QuestionnaireResponse = QResponse
       options.responses = processResponses(QResponse, options)
     }
+    if ( originalIds ) {
+      options.remote_ids = originalIds
+    }
 
     compileHealthCertificate(options, QResponse, DHSUpdate).then((results) => {
       resolve(results)
@@ -1163,7 +1190,6 @@ function compileHealthCertificate(options, QResponse, DHSUpdate) {
           html: options.divs.DocumentReference
         }
         let textDivImage = await renderHtmlToImage(imgoptions)
-
         //really we should be doing this at the end after we processed all QR codes generated
         //what is getting attached here is the representation of the DDCC
         //from the the QResps and all of QR codes
@@ -1187,7 +1213,6 @@ function compileHealthCertificate(options, QResponse, DHSUpdate) {
         )
         //ctx.putImageData(textDivImage,10,0)
         //logger.info("a4")
-
         if (QResponse !== false) {
           let addBundle = QResponseProcessors[QResponse.questionnaire](options)
 
@@ -1206,7 +1231,6 @@ function compileHealthCertificate(options, QResponse, DHSUpdate) {
               ]
             })
           }
-
           try {
             let res = await fetch(FHIR_SERVER, {
               method: "POST",
@@ -1229,7 +1253,6 @@ function compileHealthCertificate(options, QResponse, DHSUpdate) {
         }
 
         let addDocDetails = processDDCCDocDetails(options)
-
         fetch(FHIR_SERVER, {
           method: "POST",
           body: JSON.stringify(addDocDetails),
@@ -1370,6 +1393,11 @@ function pingDHS() {
             } catch (err) {
               hcid = uuidv4()
             }
+            let originalIds = {
+              Patient: addPatient.id,
+              Immunziation: immunization.id,
+              ImmunizationRecommendation: recommendation ? recommendation.id : undefined
+            }
             let QResponse = reverseQuestionnaireResponse(
               "http://worldhealthorganization.github.io/ddcc/DDCCVSCoreDataSetQuestionnaire",
               immunization,
@@ -1380,7 +1408,7 @@ function pingDHS() {
             // NEED A BETTER WAY TO DO THIS
             //let options = initializeDDCCOptions()
             //options.responses = reverseResponses(immunization, addPatient, recommendation, addPatient.identifier[0].value )
-            buildHealthCertificate(QResponse, DHS_FHIR_SERVER).then((results) => {
+            buildHealthCertificate(QResponse, DHS_FHIR_SERVER, originalIds).then((results) => {
               if (results.resourceType === "Bundle" && results.type === "document") {
                 fetch(DHS_FHIR_SERVER + "Bundle/" + results.id, {
                   method: "PUT",
@@ -1389,6 +1417,30 @@ function pingDHS() {
                 })
                   .then((res) => res.json())
                   .then((saveOutput) => {
+
+                    let ddccDocRef = {
+                      resourceType: "DocumentReference",
+                      status: "current",
+                      subject: { reference: "Patient/"+ originalIds.Patient },
+                      date: new Date().toISOString(),
+                      content: [ {
+                        attachment: {
+                          contentType: "application/fhir",
+                          url: "Bundle/"+ results.id
+                        }
+                      } ]
+                    }
+                    fetch( DHS_FHIR_SERVER + "/DocumentReference", {
+                      method: "POST",
+                      body: JSON.stringify( ddccDocRef ),
+                      headers: { "Content-Type": "application/fhir+json" }
+                    }).then( (res) => res.json() )
+                    .then( (docRefOutput ) => {
+                      logger.info("Saved docref to DHS")
+                    }).catch( err => {
+                      logger.info("Failed to save docref to DHS")
+                    })
+
                     logger.info("Saved document to DHS server " + results.id)
                   })
                   .catch((err) => {
