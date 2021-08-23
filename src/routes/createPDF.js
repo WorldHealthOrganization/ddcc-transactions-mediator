@@ -81,10 +81,10 @@ const drawText = ( page, content, font, x, y, size, color ) => {
 const drawDate = ( page, date, font, x, y, color ) => {
     if ( !date ) return
     let digits = date.split('')
-    drawText( page, digits[5], font, x, y, null, color )
-    drawText( page, digits[6], font, x+40, y, null, color )
-    drawText( page, digits[8], font, x+84, y, null, color )
-    drawText( page, digits[9], font, x+124, y, null, color )
+    drawText( page, digits[8], font, x, y, null, color )
+    drawText( page, digits[9], font, x+40, y, null, color )
+    drawText( page, digits[5], font, x+84, y, null, color )
+    drawText( page, digits[6], font, x+124, y, null, color )
     drawText( page, digits[0], font, x+168, y, null, color )
     drawText( page, digits[1], font, x+208, y, null, color )
     drawText( page, digits[2], font, x+248, y, null, color )
