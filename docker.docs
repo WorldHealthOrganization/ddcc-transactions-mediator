@@ -1,10 +1,10 @@
 docker login
 
-docker build -t svc-transactions .
-docker build -t svc-transactions-openhim -f Dockerfile.openhim .
+docker build -t lukeaduncan/svc-transactions:latest -t lukeaduncan/svc-transactions:v1.0.11 .
+docker build -t lukeaduncan/svc-transactions-openhim:latest -t lukeaduncan/svc-transactions-openhim:v1.0.11 -f Dockerfile.openhim .
 
-docker tag svc-transactions:latest lukeaduncan/svc-transactions:latest
-docker tag svc-transactions-openhim:latest lukeaduncan/svc-transactions-openhim:latest
+#docker tag svc-transactions:latest lukeaduncan/svc-transactions:latest
+#docker tag svc-transactions-openhim:latest lukeaduncan/svc-transactions-openhim:latest
 
 docker push lukeaduncan/svc-transactions:latest
 docker push lukeaduncan/svc-transactions-openhim:latest

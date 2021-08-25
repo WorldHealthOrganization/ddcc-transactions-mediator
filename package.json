@@ -4,9 +4,11 @@
   "description": "Basic OpenHIM mediator to implement the SVC transactions",
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",
+    "babel-runtime": "^6.26.0",
     "base45": "^3.0.0",
     "canvas": "^2.8.0",
     "cbor": "^7.0.5",
+    "core-js": "^3.16.3",
     "cose-js": "^0.6.0",
     "express": "^4.17.1",
     "handlebars": "^4.7.7",
@@ -18,6 +20,7 @@
     "pino": "^5.13.5",
     "pino-pretty": "^3.2.2",
     "qrcode": "^1.4.4",
+    "source-map-resolve": "^0.6.0",
     "stream-to-array": "^2.3.0"
   },
   "devDependencies": {
