@@ -858,7 +858,7 @@ function createPDBPDF(options) {
     hw: options.responses.hw,
     site: options.responses.centre,
     country: options.responses.country,
-    doses = options.responses.total_doses,
+    doses: options.responses.total_doses,
     qr: options.images.QR
   }
   if (options.responses.dose === 1) {
