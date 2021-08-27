@@ -68,7 +68,6 @@ const drawText = ( page, content, font, x, y, size, color ) => {
     const defaultColor = rgb( 0, 0, 0 )
     if ( !size ) size = defaultSize
     if ( !color ) color = defaultColor 
-
     page.drawText( content, {
         x: x,
         y: y,

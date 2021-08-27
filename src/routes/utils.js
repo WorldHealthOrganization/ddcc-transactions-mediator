@@ -849,16 +849,17 @@ function createPDBPDF(options) {
     sex: options.responses.sex.code,
     birthDate: options.responses.birthDate
   }
+  
   let dose = {
     date: options.responses.date,
     lot: options.responses.lot,
     vaccine: options.responses.vaccine.display || options.responses.vaccine.code,
-    brand: options.responses.brand,
-    manufacturer: options.responses.manufacturer,
+    brand: options.responses.brand.display || options.responses.brand.code,
+    manufacturer: options.responses.manufacturer.display || options.responses.manufacturer.code,
     hw: options.responses.hw,
     site: options.responses.centre,
-    country: options.responses.country,
-    doses: options.responses.total_doses,
+    country: options.responses.country.display || options.responses.country.code,
+    doses: (typeof options.responses.total_doses === 'number' ? options.responses.total_doses.toString() : options.responses.total_doses),
     qr: options.images.QR
   }
   if (options.responses.dose === 1) {
