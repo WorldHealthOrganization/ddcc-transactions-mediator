@@ -1,0 +1,236 @@
+{
+  "resourceType": "Bundle",
+  "id": "DDCC-TX-SHE-bundle-example-2",
+  "meta": {
+    "profile": [
+      "http://worldhealthorganization.github.io/ddcc/StructureDefinition/DDCCSubmitHealthEventRequest"
+    ]
+  },
+  "type": "batch",
+  "entry": [
+    {
+      "fullUrl": "http://www.example.org/fhir/Parameters/DDCCDemoParameters-2",
+      "resource": {
+        "resourceType": "Parameters",
+        "id": "DDCCDemoParameters-2",
+        "meta": {
+          "profile": [
+            "http://worldhealthorganization.github.io/ddcc/StructureDefinition/DDCCGenerateHealthCertificateParameters"
+          ]
+        },
+        "parameter": [
+          {
+            "name": "response",
+            "resource": {
+              "resourceType": "QuestionnaireResponse",
+              "id": "DDCC-VS-QuestionnaireResponse-Demo",
+              "meta": {
+                "profile": [
+                  "http://worldhealthorganization.github.io/ddcc/StructureDefinition/DDCCQuestionnaireResponse"
+                ]
+              },
+              "questionnaire": "http://worldhealthorganization.github.io/ddcc/DDCCVSCoreDataSetQuestionnaire",
+              "status": "completed",
+              "authored": "2021-08-27",
+              "item": [
+                {
+                  "linkId": "name",
+                  "answer": [
+                    {
+                      "valueString": "Eddie Murphy"
+                    }
+                  ]
+                },
+                {
+                  "linkId": "birthDate",
+                  "answer": [
+                    {
+                      "valueDate": "1986-09-19"
+                    }
+                  ]
+                },
+                {
+                  "linkId": "identifier",
+                  "answer": [
+                    {
+                      "valueString": "1234567890"
+                    }
+                  ]
+                },
+                {
+                  "linkId": "sex",
+                  "answer": [
+                    {
+                      "valueCoding": {
+                        "code": "male",
+                        "system": "http://hl7.org/fhir/administrative-gender"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "linkId": "vaccine",
+                  "answer": [
+                    {
+                      "valueCoding": {
+                        "code": "1119349007",
+                        "system": "http://snomed.info/sct"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "linkId": "brand",
+                  "answer": [
+                    {
+                      "valueCoding": {
+                        "code": "TEST",
+                        "system": "http://worldhealthorganization.github.io/ddcc/CodeSystem/DDCC-Example-Test-CodeSystem"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "linkId": "manufacturer",
+                  "answer": [
+                    {
+                      "valueCoding": {
+                        "code": "TEST",
+                        "system": "http://worldhealthorganization.github.io/ddcc/CodeSystem/DDCC-Example-Test-CodeSystem"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "linkId": "ma_holder",
+                  "answer": [
+                    {
+                      "valueCoding": {
+                        "code": "TEST",
+                        "system": "http://worldhealthorganization.github.io/ddcc/CodeSystem/DDCC-Example-Test-CodeSystem"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "linkId": "lot",
+                  "answer": [
+                    {
+                      "valueString": "PT123G"
+                    }
+                  ]
+                },
+                {
+                  "linkId": "date",
+                  "answer": [
+                    {
+                      "valueDate": "2021-07-29"
+                    }
+                  ]
+                },
+                {
+                  "linkId": "vaccine_valid",
+                  "answer": [
+                    {
+                      "valueDate": "2021-08-12"
+                    }
+                  ]
+                },
+                {
+                  "linkId": "dose",
+                  "answer": [
+                    {
+                      "valueInteger": 2
+                    }
+                  ]
+                },
+                {
+                  "linkId": "total_doses",
+                  "answer": [
+                    {
+                      "valueInteger": 2
+                    }
+                  ]
+                },
+                {
+                  "linkId": "country",
+                  "answer": [
+                    {
+                      "valueCoding": {
+                        "code": "USA",
+                        "system": "urn:iso:std:iso:3166"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "linkId": "centre",
+                  "answer": [
+                    {
+                      "valueString": "Vaccination Site"
+                    }
+                  ]
+                },
+                {
+                  "linkId": "hw",
+                  "answer": [
+                    {
+                      "valueString": "http://www.acme.org/practitioners/23"
+                    }
+                  ]
+                },
+                {
+                  "linkId": "disease",
+                  "answer": [
+                    {
+                      "valueCoding": {
+                        "code": "840539006",
+                        "system": "http://snomed.info/sct"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "linkId": "pha",
+                  "answer": [
+                    {
+                      "valueString": "wA69g8VD512TfTTdkTNSsG"
+                    }
+                  ]
+                },
+                {
+                  "linkId": "hcid",
+                  "answer": [
+                    {
+                      "valueString": "111000111"
+                    }
+                  ]
+                },
+                {
+                  "linkId": "valid_from",
+                  "answer": [
+                    {
+                      "valueDate": "2021-07-29"
+                    }
+                  ]
+                },
+                {
+                  "linkId": "valid_until",
+                  "answer": [
+                    {
+                      "valueDate": "2022-03-29"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "url": "QuestionnaireResponse/$generateHealthCertificate"
+      }
+    }
+  ]
+}

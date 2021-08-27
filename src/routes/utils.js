@@ -841,36 +841,107 @@ function createPDBBinaryReference(options, binaryRefId, binaryId) {
 }
 
 function createPDBPDF(options) {
-  // This still needs to process options.resources.List to look for previous DocRefs it can retrieve
-  let details = {
-    hcid: options.responses.hcid,
-    name: options.responses.name,
-    id: options.responses.identifier,
-    sex: options.responses.sex.code,
-    birthDate: options.responses.birthDate
-  }
-  
-  let dose = {
-    date: options.responses.date,
-    lot: options.responses.lot,
-    vaccine: options.responses.vaccine.display || options.responses.vaccine.code,
-    brand: options.responses.brand.display || options.responses.brand.code,
-    manufacturer: options.responses.manufacturer.display || options.responses.manufacturer.code,
-    hw: options.responses.hw,
-    site: options.responses.centre,
-    country: options.responses.country.display || options.responses.country.code,
-    doses: (typeof options.responses.total_doses === 'number' ? options.responses.total_doses.toString() : options.responses.total_doses),
-    qr: options.images.QR
-  }
-  if (options.responses.dose === 1) {
-    details.dose1 = dose
-    if (options.responses.due_date) {
-      details.dose1.date_due = options.responses.due_date
+  return new Promise( async (resolve) => {
+
+    let details = {
+      hcid: options.responses.hcid,
+      name: options.responses.name,
+      id: options.responses.identifier,
+      sex: options.responses.sex.code,
+      birthDate: options.responses.birthDate
     }
-  } else if (options.responses.dose === 2) {
-    details.dose2 = dose
-  }
-  return createDDCC(details)
+    if ( options.resources.List ) {
+      console.log("Looking at old list", options.resources.List.id)
+      let oldDocs = []
+      let urlRegex = /(.*)(Bundle\/.+)/
+      for( let entry of options.resources.List.entry ) {
+        console.log( "ENTRY",entry )
+        if ( entry.item && entry.item.reference && entry.item.reference.startsWith( "DocumentReference" ) ) {
+          let docRef = await retrieveResource( entry.item.reference )
+          console.log("got docRef",docRef.id)
+          if ( docRef.error ) continue
+          try {
+            if ( docRef.content[0].attachment.contentType === "application/fhir" ) {
+              let matched = docRef.content[0].attachment.url.match( urlRegex )
+              console.log("looking up",matched)
+              oldDocs.push( await retrieveResource( matched[2], matched[1] ) )
+
+            }
+          } catch( err ) {
+            logger.info("Err on ",docRef.id)
+            continue
+          }
+        }
+      }
+      console.log("found",oldDocs.length)
+      for( let oldDoc of oldDocs ) {
+        try {
+          let immunization = oldDoc.entry.find( entry => entry.resource.resourceType === "Immunization" )
+          let immRec = oldDoc.entry.find( entry => entry.resource.resourceType === "ImmunizationRecommendation" )
+          let patient = oldDoc.entry.find( entry => entry.resource.resourceType === "Patient" )
+          let oldResponses = reverseResponses( immunization.resource, patient.resource, immRec.resource || null, details.hcid )
+          
+          console.log("OLD RESPONSES",oldResponses)
+          let dose = {
+            date: oldResponses.date,
+            lot: oldResponses.lot,
+            vaccine: oldResponses.vaccine.display || oldResponses.vaccine.code,
+            brand: oldResponses.brand.display || oldResponses.brand.code,
+            manufacturer: oldResponses.manufacturer.display || oldResponses.manufacturer.code,
+            hw: oldResponses.hw,
+            site: oldResponses.centre,
+            country: oldResponses.country.display || oldResponses.country.code,
+            doses: (typeof oldResponses.total_doses === 'number' ? oldResponses.total_doses.toString() : oldResponses.total_doses)
+          }
+
+          let docRefs = oldDoc.entry.filter( entry => entry.resource.resourceType === "DocumentReference" )
+          let qrRef = docRefs.find( ref => ref.resource.category && ref.resource.category.find( cat => cat.coding && cat.coding.find( coding => coding.code === "who" ) ) )
+          if ( qrRef ) {
+            let qr = qrRef.resource.content.find( content => content.attachment.contentType === "image/png" )
+            dose.qr = qr.attachment.data
+          }
+
+          if (oldResponses.dose === 1) {
+            details.dose1 = dose
+            if (oldResponses.due_date) {
+              details.dose1.date_due = oldResponses.due_date
+            }
+          } else if (oldResponses.dose === 2) {
+            details.dose2 = dose
+          }
+
+        } catch( err ) {
+          logger.info("Failed to process previous Document: " + oldDoc.id + " " + err.message)
+          continue
+        }
+      }
+    }
+    
+    let dose = {
+      date: options.responses.date,
+      lot: options.responses.lot,
+      vaccine: options.responses.vaccine.display || options.responses.vaccine.code,
+      brand: options.responses.brand.display || options.responses.brand.code,
+      manufacturer: options.responses.manufacturer.display || options.responses.manufacturer.code,
+      hw: options.responses.hw,
+      site: options.responses.centre,
+      country: options.responses.country.display || options.responses.country.code,
+      doses: (typeof options.responses.total_doses === 'number' ? options.responses.total_doses.toString() : options.responses.total_doses),
+      qr: options.images.QR
+    }
+    if (options.responses.dose === 1) {
+      details.dose1 = dose
+      if (options.responses.due_date) {
+        details.dose1.date_due = options.responses.due_date
+      }
+    } else if (options.responses.dose === 2) {
+      details.dose2 = dose
+    }
+    console.log("SENDING DETAILS",details)
+    createDDCC(details).then( pdf => {
+       resolve(pdf)
+     })
+  })
 }
 
 function createPDBBinary(options, binaryId) {
