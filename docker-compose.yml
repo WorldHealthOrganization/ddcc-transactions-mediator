@@ -1,0 +1,45 @@
+version: '3.3'
+
+services:
+  ddcc:
+    container_name: ddcc-transactions-mediator
+    image: lukeaduncan/svc-transactions:latest
+    environment:
+      FHIR_SERVER: 'http://fhir:8080/fhir/'
+    ports:
+      - "4321:4321"
+    depends_on:
+      - fhir
+
+  fhir:
+    container_name: hapi-fhir
+    image: hapiproject/hapi:v5.4.1
+    environment:
+      - spring.datasource.url=jdbc:postgresql://db:5432/hapi
+      - spring.datasource.username=admin
+      - spring.datasource.password=instant101
+      - spring.datasource.driverClassName=org.postgresql.Driver
+      - hapi.fhir.allow_external_references=true
+      - hapi.fhir.max_page_size=50
+      - hapi.fhir.default_page_size=20
+    volumes:
+      - type: volume
+        source: instant
+        target: /instant
+    depends_on:
+      - db
+
+  db:
+    container_name: hapi-postgres
+    image: postgres
+    environment:
+      POSTGRES_DB: 'hapi'
+      POSTGRES_USER: 'admin'
+      POSTGRES_PASSWORD: 'instant101'
+    volumes:
+      - 'hapi-postgres:/var/lib/postgresql'
+
+volumes:
+  hapi-postgres:
+  instant:
+
