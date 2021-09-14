@@ -1,15 +1,15 @@
 {
-  "urn": "urn:mediator:who-int-svc-mediator",
+  "urn": "urn:mediator:who-int-ddcc-mediator",
   "version": "0.0.1",
-  "name": "WHO SVC Transactions Mediator",
-  "description": "WHO SVC Transactions Mediator",
+  "name": "WHO DDCC Transactions Mediator",
+  "description": "WHO DDCC Transactions Mediator",
   "defaultChannelConfig": [
     {
-      "name": "WHO SVC Transactions Route",
-      "urlPattern": "^/svc/",
+      "name": "WHO DDCC Transactions Route",
+      "urlPattern": "^/ddcc/",
       "routes": [
         {
-          "name": "SVC Endpoint",
+          "name": "DDCC Endpoint",
           "host": "localhost",
           "port": "4321",
           "primary": true,
@@ -23,9 +23,9 @@
   ],
   "endpoints": [
     {
-      "name": "WHO SVC Transactions Endpoint",
+      "name": "WHO DDCC Transactions Endpoint",
       "host": "localhost",
-      "path": "/svc/",
+      "path": "/ddcc/",
       "port": "4321",
       "primary": true,
       "type": "http"
