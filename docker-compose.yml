@@ -3,7 +3,7 @@ version: '3.3'
 services:
   ddcc:
     container_name: ddcc-transactions-mediator
-    image: lukeaduncan/svc-transactions:latest
+    image: openhie/ddcc-transactions:latest
     environment:
       FHIR_SERVER: 'http://fhir:8080/fhir/'
     ports:
