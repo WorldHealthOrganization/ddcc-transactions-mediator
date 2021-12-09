@@ -4,7 +4,6 @@ import logger from "../../logger"
 import { FHIR_SERVER, SUBMISSIONSET_IDENTIFIER_SYSTEM, FOLDER_IDENTIFIER_SYSTEM } from "../../config/config"
 import { retrieveResource } from "./index"
 import { createDDCC } from "./pdf"
-//import { reverseResponses } from "./responses"
 import { convertBundleToCoreDataSet } from "./logicalModel"
 
 const putPDBEntry = (resource) => {
@@ -99,14 +98,12 @@ const createPDBPDF = (doc, options) => {
       let oldDocs = []
       let urlRegex = /(.*)(Bundle\/.+)/
       for( let entry of options.resources.List.entry ) {
-        //console.log( "ENTRY",entry )
         if ( entry.item && entry.item.reference && entry.item.reference.startsWith( "DocumentReference" ) ) {
           let docRef = await retrieveResource( entry.item.reference )
           if ( docRef.error ) continue
           try {
             if ( docRef.content[0].attachment.contentType === "application/fhir" ) {
               let matched = docRef.content[0].attachment.url.match( urlRegex )
-              //console.log("looking up",matched)
               oldDocs.push( await retrieveResource( matched[2], matched[1] ) )
 
             }
@@ -120,14 +117,7 @@ const createPDBPDF = (doc, options) => {
       for( let oldDoc of oldDocs ) {
         try {
           let oldResponses = await convertBundleToCoreDataSet( oldDoc )
-          //console.log("GOT",oldResponses)
-/*
-          let immunization = oldDoc.entry.find( entry => entry.resource.resourceType === "Immunization" )
-          let immRec = oldDoc.entry.find( entry => entry.resource.resourceType === "ImmunizationRecommendation" )
-          let patient = oldDoc.entry.find( entry => entry.resource.resourceType === "Patient" )
-          let oldResponses = reverseResponses( immunization.resource, patient.resource, immRec.resource || null, details.hcid )
-*/          
-          //console.log("OLD RESPONSES",oldResponses)
+
           let dose = {
             date: oldResponses.vaccination.date,
             lot: oldResponses.vaccination.lot,
@@ -169,7 +159,6 @@ const createPDBPDF = (doc, options) => {
         }
       }
     }
-    //console.log(options.responses)
     let vacc = options.responses.vaccination
     let dose = {
       date: vacc.date,
@@ -203,7 +192,6 @@ const createPDBPDF = (doc, options) => {
     } else if (vacc.dose === 2) {
       details.dose2 = dose
     }
-    //console.log("SENDING DETAILS",details)
     createDDCC(details).then( pdf => {
        resolve(pdf)
      })

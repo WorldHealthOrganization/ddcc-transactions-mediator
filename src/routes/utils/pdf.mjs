@@ -1,13 +1,11 @@
 //import logger from "../../logger"
 
-import { PDFDocument, StandardFonts, rgb, setFillingGrayscaleColor } from 'pdf-lib'
+import { PDFDocument, rgb } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 import JsBarcode from 'jsbarcode'
 import toArray from 'stream-to-array'
-import fs from 'fs'
 
 import { createCanvas } from 'canvas'
-import { rejects } from 'assert'
 const canvas = createCanvas()
 
 const PDF_DEFAULTS = {
