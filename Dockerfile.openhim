@@ -46,7 +46,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN npm install -g npm
 RUN npm install
-RUN sed -i -r "s/path.skip/path.stop/g" node_modules/babel-plugin-transform-strip-block/dist-node/index.js
 
 COPY . .
 
