@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Basic OpenHIM mediator to implement the SVC transactions",
   "dependencies": {
+    "@pathcheck/dcc-sdk": "^0.0.23",
     "@pdf-lib/fontkit": "^1.1.1",
     "babel-runtime": "^6.26.0",
     "base45": "^3.0.0",
@@ -21,14 +22,14 @@
     "pino-pretty": "^3.2.2",
     "qrcode": "^1.4.4",
     "source-map-resolve": "^0.6.0",
-    "stream-to-array": "^2.3.0"
+    "stream-to-array": "^2.3.0",
+    "transliteration": "^2.2.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.14.3",
     "@babel/core": "^7.6.4",
     "@babel/preset-env": "^7.6.3",
     "@cucumber/cucumber": "^7.3.0",
-    "babel-plugin-transform-strip-block": "^0.0.4",
     "babel-preset-env": "^1.7.0",
     "eslint": "^6.6.0",
     "eslint-config-prettier": "^6.5.0",
@@ -46,9 +47,9 @@
     "printWidth": 120
   },
   "scripts": {
-    "start": "npm run build && node lib/server.js",
+    "start": "npm run build && STANDALONE=true node lib/server.js",
     "openhim": "npm run buildhim && node lib/server.js",
-    "build": "STANDALONE=true babel src --out-dir lib",
+    "build": "babel src --out-dir lib",
     "buildhim": "babel src --out-dir lib",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",

@@ -1,0 +1,22 @@
+@host = http://ddcc-demo:4321/ddcc
+@fhir = http://localhost:8081/fhir
+
+### send submitHealthEven for Demo 1
+POST {{host}}/submitHealthEvent HTTP/1.1
+Accept: application/fhir+json;fhirVersion=4.0
+Content-Type: application/fhir+json;fhirVersion=4.0
+
+< ./Demo-Bundle-1.json
+
+### send submitHealthEven for Demo 2
+POST {{host}}/submitHealthEvent HTTP/1.1
+Accept: application/fhir+json;fhirVersion=4.0
+Content-Type: application/fhir+json;fhirVersion=4.0
+
+< ./Demo-Bundle-2.json
+
+### query content
+GET {{fhir}}/Composition/bfca726f-acac-4206-bf37-5da2c491b4ac/$document
+
+### get docs
+GET {{fhir}}/Patient

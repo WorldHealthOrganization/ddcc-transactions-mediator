@@ -1,9 +1,9 @@
-// @strip-block
 'use strict'
 
 import express from 'express'
 
 import { buildReturnObject ,buildErrorObject, retrieveDocumentReference, buildHealthCertificate } from './utils'
+import {STANDALONE} from '../config/config'
 import logger from '../logger'
 
 const routes = express.Router()
@@ -34,9 +34,9 @@ routes.get('/DocumentReference/:ddccid/([\$])getQRCode', async (_req, res) => {
     res.set('Content-Type', attachment.contentType)
     res.set('Content-Disposition', 'inline; filename=QRCode_' + ddccid + '.png');
 
-    /* openhim:start */
-    res.set('Content-Type', 'application/json')
-    /* openhim:end */
+    if ( !STANDALONE ) {
+      res.set('Content-Type', 'application/json')
+    }
   }
 
   return res.send(returnObject)
@@ -76,7 +76,11 @@ routes.post('/submitHealthEvent', async (_req, res) => {
       && entry.request.url === "QuestionnaireResponse/$generateHealthCertificate"
     ) {
       responseEntry.resource = await buildHealthCertificate( entry.resource )
-      responseEntry.response.status = "201"
+      if ( responseEntry.resource.resourceType === "OperationOutcome" ) {
+        responseEntry.response.status = "500"
+      } else {
+        responseEntry.response.status = "201"
+      }
     } else {
       responseEntry.response.status = "404"
       responseEntry.resource = {
@@ -119,4 +123,4 @@ routes.post('/generateHealthCertificate', async (_req, res) => {
   return res.send(returnObject)
 } )
 
-module.exports = routes
+export default routes

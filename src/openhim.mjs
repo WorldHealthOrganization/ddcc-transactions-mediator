@@ -18,7 +18,7 @@ import {
 
 import {setMediatorUrn} from './routes/utils'
 
-const mediatorSetup = () => {
+export const mediatorSetup = () => {
   // The mediatorConfig file contains some basic configuration settings about the mediator
   // as well as details about the default channel setup.
   const mediatorConfigFile = fs.readFileSync(
@@ -65,5 +65,3 @@ const mediatorSetup = () => {
     })
   })
 }
-
-exports.mediatorSetup = mediatorSetup

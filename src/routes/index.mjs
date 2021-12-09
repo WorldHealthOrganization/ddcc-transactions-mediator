@@ -4,13 +4,10 @@ import express from 'express'
 
 import {buildReturnObject} from './utils'
 import ddccRoutes from './ddccRoutes'
-import testRoutes from './test'
 import logger from '../logger'
 
 const routes = express.Router()
 
-
-routes.use('/test', testRoutes)
 
 routes.use('/ddcc', ddccRoutes)
 // Add more routes here if needed
@@ -31,4 +28,4 @@ routes.all('*', (req, res) => {
   res.status(404).send(returnObject)
 })
 
-module.exports = routes
+export default routes

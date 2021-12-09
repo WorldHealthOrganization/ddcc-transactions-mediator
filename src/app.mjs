@@ -3,7 +3,7 @@
 import express from 'express'
 
 import routes from './routes/'
-import logger from './logger'
+//import logger from './logger'
 
 const app = express()
 
@@ -11,4 +11,4 @@ app.use(express.json( { type: [ "application/fhir+json", "application/json" ] } 
 
 app.use('/', routes)
 
-module.exports = app
+export default app

@@ -1,13 +1,13 @@
-import logger from "../logger"
+//import logger from "../../logger"
 
-const { PDFDocument, StandardFonts, rgb, setFillingGrayscaleColor } = require('pdf-lib')
-const fontkit = require('@pdf-lib/fontkit')
-const JsBarcode = require('jsbarcode')
-const toArray = require('stream-to-array')
-const fs = require('fs')
+import { PDFDocument, StandardFonts, rgb, setFillingGrayscaleColor } from 'pdf-lib'
+import fontkit from '@pdf-lib/fontkit'
+import JsBarcode from 'jsbarcode'
+import toArray from 'stream-to-array'
+import fs from 'fs'
 
-const { createCanvas } = require('canvas')
-const { rejects } = require('assert')
+import { createCanvas } from 'canvas'
+import { rejects } from 'assert'
 const canvas = createCanvas()
 
 const PDF_DEFAULTS = {
@@ -122,7 +122,7 @@ export const createDDCC = (details) => {
 
         if ( details.dose1 ) {
             if ( details.dose1.qr ) {
-                await addPng( pdfDoc, page1, details.dose1.qr, 0.5, 185, 340, 234, 234 )
+               await addPng( pdfDoc, page1, details.dose1.qr, 0.5, 185, 340, 234, 234 )
             }
 
             drawDate( page2, details.dose1.date, font, 52, 485 )

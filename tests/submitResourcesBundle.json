@@ -1,0 +1,190 @@
+{
+  "resourceType": "Bundle",
+  "id": "DDCC-Resources-Test-Bundle-1",
+  "type": "collection",
+  "link": [
+    {
+      "relation": "publication",
+      "url": "urn:HCID:111100001111"
+    }
+  ],
+  "entry": [
+    {
+      "resource": {
+	"resourceType": "Composition",
+	"id": "DDCC-Composition-Test-1",
+	"event": [
+	  {
+	    "period": {
+	      "start": "2021-05-30",
+	      "end": "2022-05-30"
+	    }
+	  }
+	]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "DDCC-Patient-English",
+        "meta": {
+          "profile": [
+            "http://worldhealthorganization.github.io/ddcc/StructureDefinition/DDCCPatient"
+          ]
+        },
+        "name": [
+          {
+            "use": "official",
+            "given": [ "Aulus", "Test" ],
+            "family": "Agerius"
+          }
+        ],
+        "birthDate": "2003-03-03",
+	"gender": "male"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "DDCC-Immunization-English",
+        "meta": {
+          "profile": [
+            "http://worldhealthorganization.github.io/ddcc/StructureDefinition/DDCCImmunization"
+          ]
+        },
+        "extension": [
+          {
+            "url": "http://worldhealthorganization.github.io/ddcc/StructureDefinition/DDCCVaccineBrand",
+            "valueCoding": {
+              "code": "TEST",
+              "system": "http://worldhealthorganization.github.io/ddcc/CodeSystem/DDCC-Example-Test-CodeSystem"
+            }
+          },
+          {
+            "url": "http://worldhealthorganization.github.io/ddcc/StructureDefinition/DDCCCountryOfVaccination",
+            "valueCode": "CHE"
+          },
+          {
+            "url": "http://worldhealthorganization.github.io/ddcc/StructureDefinition/DDCCVaccineMarketAuthorization",
+            "valueCoding": {
+              "code": "TEST",
+              "system": "http://worldhealthorganization.github.io/ddcc/CodeSystem/DDCC-Example-Test-CodeSystem"
+            }
+          },
+          {
+            "url": "http://worldhealthorganization.github.io/ddcc/StructureDefinition/DDCCVaccineValidFrom",
+            "valueDateTime": "2021-05-30"
+          }
+        ],
+        "status": "completed",
+        "vaccineCode": {
+          "coding": [
+            {
+              "code": "XM0CX4",
+              "system": "http://id.who.int/icd11/mms"
+            }
+          ]
+        },
+	"manufacturer": {
+	  "identifier": {
+	    "system": "http://who.int",
+	    "value": "Moderna"
+	  }
+	},
+        "expirationDate": "2021-06-30",
+        "lotNumber": "123",
+        "patient": {
+          "reference": "Patient/DDCC-Patient-English"
+        },
+        "location": {
+          "display": "Vaccination Site"
+        },
+        "occurrenceDateTime": "2021-05-06",
+        "performer": [
+          {
+            "actor": {
+	      "type": "Practitioner",
+              "identifier": {
+		"value": "lkjasdkfj"
+	      }
+            }
+          }
+        ],
+        "protocolApplied": [
+          {
+            "authority": {
+              "reference": "Organization/DDCC-Organization-English"
+            },
+            "targetDisease": [
+              {
+                "coding": [
+                  {
+                    "code": "RA01",
+                    "system": "http://id.who.int/icd11/mms"
+                  }
+                ]
+              }
+            ],
+            "doseNumberPositiveInt": 1,
+            "seriesDosesPositiveInt": 2
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "ImmunizationRecommendation",
+        "id": "DDCC-ImmunizationRecommendation-English",
+        "meta": {
+          "profile": [
+            "http://worldhealthorganization.github.io/ddcc/StructureDefinition/DDCCImmunizationRecommendation"
+          ]
+        },
+        "recommendation": [
+          {
+            "forecastStatus": {
+              "coding": [
+                {
+                  "code": "due",
+                  "system": "http://terminology.hl7.org/CodeSystem/immunization-recommendation-status"
+                }
+              ]
+            },
+            "dateCriterion": [
+              {
+                "code": {
+                  "coding": [
+                    {
+                      "code": "30980-7",
+                      "system": "http://loinc.org"
+                    }
+                  ]
+                },
+                "value": "2021-05-20"
+              }
+            ],
+            "vaccineCode": [
+              {
+                "coding": [
+                  {
+                    "code": "XM0CX4",
+                    "system": "http://id.who.int/icd11/mms"
+                  }
+                ]
+              }
+            ],
+            "supportingImmunization": [
+              {
+                "reference": "Immunization/DDCC-Immunization-English"
+              }
+            ]
+          }
+        ],
+        "date": "2021-05-06",
+        "patient": {
+          "reference": "Patient/DDCC-Patient-English"
+        }
+      }
+    } 
+  ]
+}
