@@ -1,4 +1,4 @@
-@host = http://ddcc-demo:4321/ddcc
+@host = http://localhost:4321/ddcc
 @fhir = http://localhost:8081/fhir
 
 ### send submitHealthEven for Demo 1

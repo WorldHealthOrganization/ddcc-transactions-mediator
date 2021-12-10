@@ -6,7 +6,7 @@ services:
     image: openhie/ddcc-transactions:latest
     environment:
       FHIR_SERVER: 'http://fhir:8080/fhir/'
-      MATCHBOX_SERVER: 'http://matchbox:8080/matchbox/fhir'
+      MATCHBOX_SERVER: 'http://matchbox:8080/matchbox/fhir/'
     ports:
       - "4321:4321"
     depends_on:

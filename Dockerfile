@@ -1,4 +1,4 @@
-FROM node:fermium
+FROM node:gallium
 
 WORKDIR /app
 
