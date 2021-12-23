@@ -16,7 +16,7 @@ export const addContent = ( qrDocRef, data ) => {
     }
     let modName = typeCode.code
     if ( qrModules.hasOwnProperty(modName) ) {
-      let serialized = qrModules[modName].serialize( data, qrDocRef.id )
+      let serialized = await qrModules[modName].serialize( data, qrDocRef.id )
       let serialized64 = Buffer.from( JSON.stringify( serialized ) ).toString('base64')
       let serialAttachment = qrDocRef.content.find( content => content.format && content.format.code === "serialized" )
       if ( serialAttachment ) {
