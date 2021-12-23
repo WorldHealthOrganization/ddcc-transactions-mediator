@@ -282,6 +282,7 @@ const compileHealthCertificate = (options, QResponse) => {
         let docId = uuidv4()
         doc.id = docId
         doc.link = [ { relation: "publication", url: "urn:HCID:" + options.responses.certificate.hcid.value } ]
+        doc.entry = addBundle.entry;
 
         let docBuffer = Buffer.from(JSON.stringify(doc))
         let sign = crypto.sign("SHA256", docBuffer, PRIVATE_KEY)

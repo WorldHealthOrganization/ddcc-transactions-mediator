@@ -25,14 +25,14 @@ export const serialize = ( data, id ) => {
     dob: data.birthDate,
     v: [
       {
-        tg: data.vaccination.disease.code,
-        vp: data.vaccination.vaccine.code,
-        mp: data.vaccination.brand.code,
-        ma: data.vaccination.manufacturer.code || data.vaccination.maholder.code,
-        dn: data.vaccination.dose || 1,
-        sd: data.vaccination.totalDoses || 1,
-        dt: data.vaccination.date,
-        co: data.vaccination.country.code,
+        tg: data.vaccination[0].disease.code,
+        vp: data.vaccination[0].vaccine.code,
+        mp: data.vaccination[0].brand.code,
+        ma: data.vaccination[0].manufacturer.code || data.vaccination[0].maholder.code,
+        dn: data.vaccination[0].dose || 1,
+        sd: data.vaccination[0].totalDoses || 1,
+        dt: data.vaccination[0].date,
+        co: data.vaccination[0].country.code,
         is: data.certificate.issuer.identifier.value,
         ci: "URN:UVCI:01:WHO:" + id
       }

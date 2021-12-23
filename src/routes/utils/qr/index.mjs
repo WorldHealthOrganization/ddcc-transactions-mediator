@@ -1,10 +1,11 @@
 import * as who from "./who"
 import * as dcc from "./dcc"
+import * as shc from "./shc"
 import logger from "../../../logger"
 import { createQRPDF } from "../pdf"
 import qrcode from "qrcode"
 
-const qrModules = { who, dcc }
+const qrModules = { who, dcc, shc }
 
 export const addContent = ( qrDocRef, data ) => {
   return new Promise( async (resolve, reject) => {
