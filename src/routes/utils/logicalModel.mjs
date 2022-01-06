@@ -4,7 +4,7 @@ import { transform } from "./structureMaps"
 export const convertQRToCoreDataSet = (QResponse) => {
 
   return new Promise((resolve) => {
-    transform( "QRespToCoreDataSet", QResponse )
+    transform( "QRespToVSCoreDataSet", QResponse )
     .then((transformed) => {
       logger.info("Converted QResp to CoreDataSet")
       resolve(transformed)
@@ -18,7 +18,7 @@ export const convertQRToCoreDataSet = (QResponse) => {
 
 export const convertBundleToCoreDataSet = (bundle) => {
   return new Promise((resolve) => {
-    transform( "ResourcesToCoreDataSet", bundle )
+    transform( "ResourcesToVSCoreDataSet", bundle )
     .then((transformed) => {
       logger.info("Converted Bundle to CoreDataSet")
       resolve(transformed)

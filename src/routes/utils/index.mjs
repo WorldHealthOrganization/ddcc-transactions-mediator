@@ -279,7 +279,7 @@ const compileHealthCertificate = (options, QResponse) => {
       fetch(FHIR_SERVER + "Composition/" + compEntry.resource.id + "/$document")
       .then((res) => res.json())
       .then((doc) => {
-        let docId = uuidv4()
+        let docId = (options.responses.certificate.ddccid && options.responses.certificate.ddccid.value) || uuidv4()
         doc.id = docId
         doc.link = [ { relation: "publication", url: "urn:HCID:" + options.responses.certificate.hcid.value } ]
 

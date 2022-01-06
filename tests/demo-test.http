@@ -1,5 +1,5 @@
 @host = http://localhost:4321/ddcc
-@fhir = http://localhost:8081/fhir
+@fhir = http://localhost:9080/fhir
 
 ### send submitHealthEven for Demo 1
 POST {{host}}/submitHealthEvent HTTP/1.1
