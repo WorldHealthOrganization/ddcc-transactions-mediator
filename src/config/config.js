@@ -70,3 +70,28 @@ CNzBl86e4Z0+frREXpHkzIdT5fOnwRIdPI0uw2qfQGT4EhDrqoggiufwoGg94rOP
 KuskSnJXguOmuuTmNBOEJcJTUu7d6PE3FrXvD5XDnhbfeO+YLBaJszMOc1d3ZqGf
 ZWlGoAY9mymwy2v9dcMeeYawL2ZcTfthqkX5B32H3hE=
 -----END CERTIFICATE-----`
+
+export const PRIVATE_KEY_EC = {
+  "kty": "EC",
+  "kid": "0OZJuQ_pm6em_mHSSUMwMC3ZD2EshyDo6NDJhMm7QAY",
+  "use": "sig",
+  "alg": "ES256",
+  "x5c": [],
+  "crv": "P-256",
+  "x": "sSimT2IyeoHXqlCf_FzpHEVl7vTi8_xRXRgG922oJW4",
+  "y": "B_VFOyQ0Rpek9nFqNu5anXT43A--m0MYaPfZ4iCR1xI",
+  "d": "_7YL1c_0CDn3NU7SVD9T6jKv9F2AEOQ5HmgTfVflo-o"
+}
+
+export const PUBLIC_KEY_EC = {
+  "kty": "EC",
+  "kid": "0OZJuQ_pm6em_mHSSUMwMC3ZD2EshyDo6NDJhMm7QAY",
+  "use": "sig",
+  "alg": "ES256",
+  "x5c": [],
+  "crv": "P-256",
+  "x": "sSimT2IyeoHXqlCf_FzpHEVl7vTi8_xRXRgG922oJW4",
+  "y": "B_VFOyQ0Rpek9nFqNu5anXT43A--m0MYaPfZ4iCR1xI"
+} 
+
+export const SHC_ISSUER = 'https://localhost:4321/shc_issuer';

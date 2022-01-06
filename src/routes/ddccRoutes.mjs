@@ -3,7 +3,7 @@
 import express from 'express'
 
 import { buildReturnObject ,buildErrorObject, retrieveDocumentReference, buildHealthCertificate } from './utils'
-import {STANDALONE} from '../config/config'
+import {STANDALONE, PUBLIC_KEY_EC} from '../config/config'
 import logger from '../logger'
 
 const routes = express.Router()
@@ -121,6 +121,15 @@ routes.post('/generateHealthCertificate', async (_req, res) => {
     )
   }
   return res.send(returnObject)
+} )
+
+routes.get('/shc_issuer/.well-known/jwks.json', async (_req, res) => {
+  return res.send(buildReturnObject(
+    'Successful',
+    200,
+    PUBLIC_KEY_EC
+    )
+  )
 } )
 
 export default routes

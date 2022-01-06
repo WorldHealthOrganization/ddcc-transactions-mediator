@@ -1,10 +1,11 @@
 import * as who from "./who"
 import * as dcc from "./dcc"
+import * as shc from "./shc"
 import logger from "../../../logger"
 import { createQRPDF } from "../pdf"
 import qrcode from "qrcode"
 
-const qrModules = { who, dcc }
+const qrModules = { who, dcc, shc }
 
 export const addContent = ( qrDocRef, data ) => {
   return new Promise( async (resolve, reject) => {
@@ -15,7 +16,7 @@ export const addContent = ( qrDocRef, data ) => {
     }
     let modName = typeCode.code
     if ( qrModules.hasOwnProperty(modName) ) {
-      let serialized = qrModules[modName].serialize( data, qrDocRef.id )
+      let serialized = await qrModules[modName].serialize( data, qrDocRef.id )
       let serialized64 = Buffer.from( JSON.stringify( serialized ) ).toString('base64')
       let serialAttachment = qrDocRef.content.find( content => content.format && content.format.code === "serialized" )
       if ( serialAttachment ) {
