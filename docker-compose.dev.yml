@@ -43,7 +43,7 @@ services:
       - hapi.fhir.implementationguides.0.version=2.7.0
       - hapi.fhir.implementationguides.1.name=ihe.mhd.fhir
       - hapi.fhir.implementationguides.1.version=4.0.1
-      - hapi.fhir.implementationguides.2.url=https://worldhealthorganization.github.io/ddcc/refs/heads/ddcc-tr/package.tgz
+      - hapi.fhir.implementationguides.2.url=https://worldhealthorganization.github.io/ddcc/package.tgz
       - hapi.fhir.implementationguides.2.name=fhir.who.ddcc-vs
       - hapi.fhir.implementationguides.2.version=0.3.1
     volumes:

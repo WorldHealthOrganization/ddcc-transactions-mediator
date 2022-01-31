@@ -1,18 +1,6 @@
 version: '3.3'
 
 services:
-  ddcc:
-    container_name: ddcc-transactions-mediator
-    image: openhie/ddcc-transactions:latest
-    environment:
-      FHIR_SERVER: 'http://fhir:8080/fhir/'
-      MATCHBOX_SERVER: 'http://matchbox:8080/matchbox/fhir/'
-    ports:
-      - "4321:4321"
-    depends_on:
-      - fhir
-      - matchbox
-
   fhir:
     container_name: hapi-fhir
     image: hapiproject/hapi:v5.4.1
@@ -28,8 +16,12 @@ services:
       - type: volume
         source: instant
         target: /instant
+    # open hapi ports for development
+    ports:
+      - "8081:8080"
     depends_on:
       - db
+
 
   matchbox:
     container_name: matchbox-fhir
@@ -42,6 +34,13 @@ services:
       - hapi.fhir.implementationguides.2.url=https://worldhealthorganization.github.io/ddcc/package.tgz
       - hapi.fhir.implementationguides.2.name=fhir.who.ddcc-vs
       - hapi.fhir.implementationguides.2.version=0.3.1
+    volumes:
+      - type: volume
+        source: instant
+        target: /instant
+    # open matchbox ports for development
+    ports:
+      - "8080:8080"
 
   db:
     container_name: hapi-postgres

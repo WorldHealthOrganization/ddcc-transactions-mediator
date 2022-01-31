@@ -23,7 +23,7 @@ The following variables can be set:
 
 | Environment Variable | Default | Description |
 | --- | --- | --- |
-| SERVER_PORT | 3002 | The exposed port of the mediator |
+| SERVER_PORT | 4321 | The exposed port of the mediator |
 | OPENHIM_URL | <https://localhost:8080> | The location of the the OpenHIM API |
 | OPENHIM_USERNAME | root@openhim.org | Registered OpenHIM Username |
 | OPENHIM_PASSWORD | openhim-password | Password of the registered OpenHIM user |
@@ -31,37 +31,47 @@ The following variables can be set:
 
 ---
 
+### Supporting Software
+
+This mediator requires a FHIR server as well as a [Matchbox FHIR server](https://github.com/ahdis/matchbox) for handling structure maps.  You can set
+environment variables so the server knows where to access them.
+
+| Environment Variable | Default | Description |
+| --- | --- | --- |
+| FHIR_SERVER | http://localhost:8081/fhir/ | The path to the FHIR API. |
+| MATCHBOX_SERVER | http://localhost:8080/matchbox/fhir/ | The path to the Matchbox FHIR API |
+
+You can use docker-compose to start docker versions of the required software using the docker-compose.support.yml file:
+
+```
+docker-compose -f docker-compose.support.yml up
+```
+
+---
+
 ### Node && NPM
 
-To run startup the RedCap mediator open a terminal and navigate to the project directory and run the following commands:
+To run the mediator open a terminal and navigate to the project directory and run the following commands:
 
 ```sh
 npm install
 
-<Environment_Variables> npm start
+<Environment_Variables> npm run openhim
 ```
 
 Example start command:
 
 ```sh
-SERVER_PORT=4321 OPENHIM_PASSWORD=password npm start
+SERVER_PORT=4321 OPENHIM_PASSWORD=password npm openhim
+```
+
+To run the server in standalone mode without OpenHIM, you can use:
+
+```
+<Environment_Variables> npm run start
 ```
 
 ---
-
-### Docker
-
-To run startup the bootstrap mediator open a terminal and navigate to the project directory and run the following commands:
-
-```sh
-docker build -t skeleton-mediator .
-
-docker network ls
-
-docker run -e OPENHIM_PASSWORD=password -e SERVER_PORT=4321 --network {openhim-network} --name skeleton-mediator --rm skeleton-mediator
-```
-
-> If you start the skeleton mediator with Docker it would be easiest to also have the OpenHIM Core running in a container using Docker. See [this tutorial](https://github.com/jembi/openhim-mediator-tutorial) for setting up the OpenHIM with docker and connecting mediators on the same network
 
 ### Configuring OpenHIM
 

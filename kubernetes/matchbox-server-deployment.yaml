@@ -22,7 +22,7 @@ spec:
           command: ['sh', '-c', 'until telnet hapi-fhir-mysql-service 3306; do echo MySQL not running yet; sleep 10; done;']
       containers:
         - name: hapi-fhir-server
-          image: eu.gcr.io/fhir-ch/matchbox:v094
+          image: eu.gcr.io/fhir-ch/matchbox:v140
           env:
             - name: spring.datasource.url
               value: jdbc:mysql://hapi-fhir-mysql-service:3306/hapi
@@ -36,4 +36,20 @@ spec:
               value: org.hibernate.dialect.MySQL5InnoDBDialect
             - name: hapi.fhir.allow_external_references
               value: 'true'
+            - name: hapi.fhir.implementationguides.0.name
+              value: hl7.fhir.uv.sdc
+            - name: hapi.fhir.implementationguides.0.version
+              value: 2.7.0
+            - name: hapi.fhir.implementationguides.1.name
+              value: ihe.mhd.fhir
+            - name: hapi.fhir.implementationguides.1.version
+              value: 4.0.1
+            - name: hapi.fhir.implementationguides.2.url
+              value: https://worldhealthorganization.github.io/ddcc/package.tgz
+            - name: hapi.fhir.implementationguides.2.name
+              value: fhir.who.ddcc-vs
+            - name: hapi.fhir.implementationguides.2.version
+              value: 0.3.1
+
+
       restartPolicy: Always
