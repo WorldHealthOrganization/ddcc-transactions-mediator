@@ -43,25 +43,28 @@ export const mediatorSetup = () => {
     urn: mediatorConfig.urn
   }
 
-  // The purpose of registering the mediator is to allow easy communication between the mediator and the OpenHIM.
-  // The details received by the OpenHIM will allow quick channel setup which will allow tracking of requests from
-  // the client through any number of mediators involved and all the responses along the way(if the mediators are
-  // properly configured). Moreover, if the request fails for any reason all the details are recorded and it can
-  // be replayed at a later date to prevent data loss.
-  registerMediator(openhimConfig, mediatorConfig, err => {
-    if (err) {
-      throw new Error(
-        `Failed to register mediator. Check your Config: ${err.message}`
-      )
-    }
+  const tryRegister = () => {
+    // The purpose of registering the mediator is to allow easy communication between the mediator and the OpenHIM.
+    // The details received by the OpenHIM will allow quick channel setup which will allow tracking of requests from
+    // the client through any number of mediators involved and all the responses along the way(if the mediators are
+    // properly configured). Moreover, if the request fails for any reason all the details are recorded and it can
+    // be replayed at a later date to prevent data loss.
+    registerMediator(openhimConfig, mediatorConfig, err => {
+      if (err) {
+        logger.info( `Failed to register mediator. Check your Config: ${err.message}.  Will try again later.` )
+        setTimeout( tryRegister, 10000 )
+        return
+      }
 
-    logger.info('Successfully registered mediator!')
+      logger.info('Successfully registered mediator!')
 
-    // The activateHeartbeat method returns an Event Emitter which allows the mediator to attach listeners waiting
-    // for specific events triggered by OpenHIM responses to the mediator posting its heartbeat.
-    const emitter = activateHeartbeat(openhimConfig)
-    emitter.on('error', err => {
-      logger.error(`Heartbeat failed: ${JSON.stringify(err)}`)
+      // The activateHeartbeat method returns an Event Emitter which allows the mediator to attach listeners waiting
+      // for specific events triggered by OpenHIM responses to the mediator posting its heartbeat.
+      const emitter = activateHeartbeat(openhimConfig)
+      emitter.on('error', err => {
+        logger.error(`Heartbeat failed: ${JSON.stringify(err)}`)
+      })
     })
-  })
+  }
+  tryRegister()
 }
