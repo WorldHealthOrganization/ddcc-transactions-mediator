@@ -1,7 +1,7 @@
 {
-  "name": "openhim-mediator-svc-transactions",
+  "name": "openhim-mediator-ddcc-transactions",
   "version": "0.0.1",
-  "description": "Basic OpenHIM mediator to implement the SVC transactions",
+  "description": "Basic OpenHIM mediator to implement the DDCC transactions",
   "dependencies": {
     "@pathcheck/dcc-sdk": "^0.0.23",
     "@pathcheck/shc-sdk": "^0.0.8",
@@ -17,7 +17,7 @@
     "jsbarcode": "^3.11.4",
     "node-fetch": "^2.6.1",
     "node-html-to-image": "^3.1.0",
-    "openhim-mediator-utils": "^0.2.3",
+    "openhim-mediator-utils": "^0.2.4",
     "pdf-lib": "^1.16.0",
     "pino": "^5.13.5",
     "pino-pretty": "^3.2.2",
@@ -57,7 +57,7 @@
     "test": "npm run build && ./node_modules/.bin/cucumber-js",
     "testhim": "npm run buildhim && ./node_modules/.bin/cucumber-js"
   },
-  "repository": "git@github.com:who-int/svc-transactions-mediator.git",
+  "repository": "git@github.com:WorldHealthOrganization/ddcc-transactions-mediator.git",
   "keywords": [
     "openhim",
     "mediator",
@@ -65,6 +65,6 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/who-int/svc-transactions-mediator/issues"
+    "url": "https://github.com/WorldHealthOrganization/ddcc-transactions-mediator/issues"
   }
 }
