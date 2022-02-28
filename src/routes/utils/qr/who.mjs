@@ -1,4 +1,4 @@
-import { PRIVATE_KEY, PUBLIC_KEY } from "../../../config/config"
+import { PRIVATE_KEY, PUBLIC_KEY } from "../keys"
 import { makeCWT, signAndPack } from "@pathcheck/dcc-sdk"
 
 export const serialize = ( data, id ) => {

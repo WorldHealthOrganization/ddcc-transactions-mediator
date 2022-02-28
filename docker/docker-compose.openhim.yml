@@ -8,6 +8,7 @@ services:
       FHIR_SERVER: 'http://fhir:8080/fhir/'
       MATCHBOX_SERVER: 'http://matchbox:8080/matchbox/fhir/'
       OPENHIM_URL: 'https://core:8080'
+      TRUST_SELF_SIGNED: 'true'
     ports:
       - "4321:4321"
     depends_on:

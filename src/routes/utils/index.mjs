@@ -6,13 +6,16 @@ import fetch from "node-fetch"
 import crypto from "crypto"
 
 import logger from "../../logger"
-import { FHIR_SERVER, FOLDER_IDENTIFIER_SYSTEM, PRIVATE_KEY, STANDALONE } from "../../config/config"
+import { FHIR_SERVER, FOLDER_IDENTIFIER_SYSTEM, STANDALONE, DDCC_IDENTIFIER_SYSTEM } from "../../config/config"
 
 import { processDDCCBundle } from "./ddccBundle"
 import { createProvideDocumentBundle } from "./provideDocumentBundle"
 import { convertQRToCoreDataSet } from "./logicalModel"
 import { addAllContent } from "./qr"
 
+import { PRIVATE_KEY } from "./keys"
+
+import canonicalize from "./canonicalize"
 
 let urn
 
@@ -280,12 +283,18 @@ const compileHealthCertificate = (options, QResponse) => {
       .then((res) => res.json())
       .then((doc) => {
         let docId = (options.responses.certificate.ddccid && options.responses.certificate.ddccid.value) || uuidv4()
-        doc.id = docId
+        doc.identifier = [ {
+          system: DDCC_IDENTIFIER_SYSTEM,
+          value: docId
+        } ]
         doc.link = [ { relation: "publication", url: "urn:HCID:" + options.responses.certificate.hcid.value } ]
         doc.entry = addBundle.entry;
 
-        let docBuffer = Buffer.from(JSON.stringify(doc))
-        let sign = crypto.sign("SHA256", docBuffer, PRIVATE_KEY)
+        let sign = crypto.sign("SHA256", canonicalize(doc), PRIVATE_KEY)
+
+        doc.id = docId
+
+        /*
         doc.signature = {
           type: [
             {
@@ -297,15 +306,67 @@ const compileHealthCertificate = (options, QResponse) => {
           who: { identifier: { value: options.responses.certificate.issuer.identifier.value } },
           data: sign.toString("base64")
         }
+        */
 
-        fetch(FHIR_SERVER + "Bundle/" + docId, {
-          method: "PUT",
-          body: JSON.stringify(doc),
+        let provenance = {
+          resourceType: "Provenance",
+          id: uuidv4(),
+          target: { reference: "Document/"+docId },
+          occurredDateTime: options.now,
+          recorded: options.now,
+          activity: {
+            coding: [ {
+              system: "http://terminology.hl7.org/CodeSystem/v3-DocumentCompletion",
+              code: "LA"
+            } ]
+          },
+          agent: [ {
+            who: { identifier: { value: options.responses.certificate.issuer.identifier.value } }
+          } ],
+          signature: {
+            type: [
+              {
+                system: "urn:iso-astm:E1762-95:2013",
+                code: "1.2.840.10065.1.12.1.5"
+              }
+            ],
+            when: options.now,
+            who: { identifier: { value: options.responses.certificate.issuer.identifier.value } },
+            data: sign.toString("base64")
+          }
+        }
+
+        let docBundle = {
+          resourceType: "Bundle",
+          type: "transaction",
+          entry: [
+            {
+              fullUrl: "urn:uuid:" + docId,
+              resource: doc,
+              request: {
+                method: "PUT",
+                url: "Bundle/"+docId
+              }
+            },
+            {
+              fullUrl: "urn:uuid:" + provenance.id,
+              resource: provenance,
+              request: {
+                method: "PUT",
+                url: "Provenance/"+provenance.id
+              }
+            }
+          ]
+        }
+
+        fetch(FHIR_SERVER, {
+          method: "POST",
+          body: JSON.stringify(docBundle),
           headers: { "Content-Type": "application/fhir+json" }
         })
           .then((res) => res.json())
           .then((docAdded) => {
-            
+
             createProvideDocumentBundle(doc, options)
 
             resolve(doc)

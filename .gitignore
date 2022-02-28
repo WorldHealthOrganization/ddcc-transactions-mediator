@@ -119,3 +119,6 @@ dist
 
 # macos
 .DS_Store
+
+# keys
+*.pem
