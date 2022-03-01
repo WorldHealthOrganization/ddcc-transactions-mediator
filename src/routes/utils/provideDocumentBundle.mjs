@@ -159,7 +159,7 @@ const createPDBPDF = (doc, options) => {
         }
       }
     }
-    let vacc = options.responses.vaccination[0]
+    let vacc = options.responses.vaccination
     let dose = {
       date: vacc.date,
       lot: vacc.lot,
