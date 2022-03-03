@@ -72,13 +72,15 @@ services:
     container_name: matchbox-fhir
     image: eu.gcr.io/fhir-ch/matchbox:v140
     environment:
-      - hapi.fhir.implementationguides.0.name=hl7.fhir.uv.sdc
-      - hapi.fhir.implementationguides.0.version=2.7.0
-      - hapi.fhir.implementationguides.1.name=ihe.mhd.fhir
-      - hapi.fhir.implementationguides.1.version=4.0.1
-      - hapi.fhir.implementationguides.2.url=https://worldhealthorganization.github.io/ddcc/package.tgz
-      - hapi.fhir.implementationguides.2.name=fhir.who.ddcc-vs
-      - hapi.fhir.implementationguides.2.version=0.3.1
+      - HAPI_FHIR_IMPLEMENTATIONGUIDES_SDC_NAME=hl7.fhir.uv.sdc
+      - HAPI_FHIR_IMPLEMENTATIONGUIDES_SDC_VERSION=2.7.0
+      - HAPI_FHIR_IMPLEMENTATIONGUIDES_MHD_NAME=ihe.mhd.fhir
+      - HAPI_FHIR_IMPLEMENTATIONGUIDES_MHD_VERSION=4.0.1
+      - HAPI_FHIR_IMPLEMENTATIONGUIDES_DDCC_URL=https://worldhealthorganization.github.io/ddcc/package.tgz
+      - HAPI_FHIR_IMPLEMENTATIONGUIDES_DDCC_NAME=fhir.who.ddcc-vs
+      - HAPI_FHIR_IMPLEMENTATIONGUIDES_DDCC_VERSION=0.3.1
+    ports:
+        - "8023:8080"
 
   db:
     container_name: hapi-postgres
