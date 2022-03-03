@@ -12,6 +12,8 @@ export const OPENHIM_PASSWORD =
   process.env.OPENHIM_PASSWORD || 'instant101'
 export const TRUST_SELF_SIGNED = process.env.TRUST_SELF_SIGNED === 'true'
 
+export const MEDIATOR_HOST = process.env.MEDIATOR_HOST || false
+
 // FHIR server
 export const FHIR_SERVER = process.env.FHIR_SERVER || 'http://localhost:8081/fhir/'
 

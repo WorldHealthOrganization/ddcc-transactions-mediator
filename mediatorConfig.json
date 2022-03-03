@@ -17,7 +17,7 @@
         }
       ],
       "allow": ["test"],
-      "methods": ["GET"],
+      "methods": ["GET", "POST"],
       "type": "http"
     }
   ],

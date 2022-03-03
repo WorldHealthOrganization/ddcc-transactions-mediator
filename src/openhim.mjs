@@ -13,10 +13,12 @@ import {
   OPENHIM_PASSWORD,
   OPENHIM_URL,
   OPENHIM_USERNAME,
+  MEDIATOR_HOST,
   TRUST_SELF_SIGNED
 } from './config/config'
 
 import {setMediatorUrn} from './routes/utils'
+import { componentsToColor } from 'pdf-lib'
 
 export const mediatorSetup = () => {
   // The mediatorConfig file contains some basic configuration settings about the mediator
@@ -31,6 +33,26 @@ export const mediatorSetup = () => {
   } catch (error) {
     logger.error(`Failed to parse JSON in mediatorConfig.json`)
     throw error
+  }
+  
+  if ( MEDIATOR_HOST ) {
+    const setHost = ( confObj, host ) => {
+      if ( Array.isArray(confObj) ) {
+        for( const entry of confObj ) {
+          setHost( entry, host )
+        }
+      } else {
+        if ( confObj.hasOwnProperty('host') ) {
+          confObj.host = host
+        }
+        for( const k of Object.keys(confObj) ) {
+          if ( typeof confObj[k] === "object" ) {
+            setHost( confObj[k], host )
+          }
+        }
+      }
+    }    
+    setHost( mediatorConfig, MEDIATOR_HOST )
   }
 
   setMediatorUrn(mediatorConfig.urn)
