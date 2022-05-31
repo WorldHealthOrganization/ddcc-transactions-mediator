@@ -2,7 +2,7 @@
 
 import express from 'express'
 
-import { buildReturnObject ,buildErrorObject, retrieveDocumentReference, buildHealthCertificate } from './utils'
+import { buildReturnObject ,buildErrorObject, retrieveDocumentReference, buildHealthCertificate, buildIPSCertificate } from './utils'
 import {STANDALONE, PUBLIC_KEY_EC} from '../config/config'
 import logger from '../logger'
 
@@ -109,6 +109,24 @@ routes.post('/generateHealthCertificate', async (_req, res) => {
   logger.info('Generate Health Certificate Endpoint Triggered')
 
   let Document = await buildHealthCertificate( _req.body )
+  let returnObject
+
+  if ( Document.resourceType !== "Bundle" ) {
+    returnObject = buildErrorObject( Document )
+  } else {
+    returnObject = buildReturnObject(
+      'Successful',
+      200,
+      Document
+    )
+  }
+  return res.send(returnObject)
+} )
+
+routes.post('/submitIPS', async (_req, res) => {
+  logger.info('Submit IPS Endpoint Triggered')
+
+  let Document = await buildIPSCertificate( _req.body )
   let returnObject
 
   if ( Document.resourceType !== "Bundle" ) {

@@ -10,7 +10,7 @@ import { FHIR_SERVER, FOLDER_IDENTIFIER_SYSTEM, STANDALONE, DDCC_IDENTIFIER_SYST
 
 import { processDDCCBundle } from "./ddccBundle"
 import { createProvideDocumentBundle } from "./provideDocumentBundle"
-import { convertQRToCoreDataSet } from "./logicalModel"
+import { convertQRToCoreDataSet, convertIPSToCoreDataSet } from "./logicalModel"
 import { addAllContent } from "./qr"
 
 import { PRIVATE_KEY } from "./keys"
@@ -196,6 +196,39 @@ export const buildHealthCertificate = (DDCCParameters) => {
     })
   })
 }
+/*
+For IPS method:
+
+* set up options as above (line 177) for each logical model in return bundle from IPS structuremap.
+* call compileHealthCertificate for each.  return last result
+  * update compileHealthCertificate to make QResponse argument optional
+*/
+
+export const buildIPSCertificate = (ips) => {
+  return new Promise( async (resolve) => {
+    let lmBundle = await convertIPSToCoreDataSet( ips )
+    if ( !lmBundle || lmBundle.error ) {
+      return resolve({
+        resourceType: "OperationOutcome",
+        issue: [
+          {
+            severity: "error",
+            code: "required",
+            diagnostics: "Error converting to core data set: " + lmBundle.error
+          }
+        ]
+      })      
+    } else {
+      let results
+      for( let lmEntry of lmBundle.entry ) {
+        let options = QResponseInitializers["http://worldhealthorganization.github.io/ddcc/DDCCVSCoreDataSetQuestionnaire"]()
+        options.responses = lmBundle.entry.resource
+        results = await compileHealthCertificate(options)
+      }
+      return resolve(results)
+    }
+  } )
+}
 
 const compileHealthCertificate = (options, QResponse) => {
   return new Promise(async (resolve) => {
@@ -226,13 +259,15 @@ const compileHealthCertificate = (options, QResponse) => {
       })
     }
 
-    addBundle.entry.push( {
-      resource: QResponse,
-      request: {
-        method: "POST",
-        url: "QuestionnaireResponse"
-      }
-    })
+    if ( QResponse ) {
+      addBundle.entry.push( {
+        resource: QResponse,
+        request: {
+          method: "POST",
+          url: "QuestionnaireResponse"
+        }
+      })
+    }
 
 
     let addPatient = addBundle.entry && addBundle.entry.find((entry) => entry.resource && entry.resource.resourceType === "Patient")

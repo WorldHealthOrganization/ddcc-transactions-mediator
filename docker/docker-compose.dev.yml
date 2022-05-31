@@ -37,15 +37,15 @@ services:
 
   matchbox:
     container_name: matchbox-fhir
-    image: eu.gcr.io/fhir-ch/matchbox:v140
+    image: eu.gcr.io/fhir-ch/matchbox:v210
     environment:
       - HAPI_FHIR_IMPLEMENTATIONGUIDES_SDC_NAME=hl7.fhir.uv.sdc
       - HAPI_FHIR_IMPLEMENTATIONGUIDES_SDC_VERSION=2.7.0
       - HAPI_FHIR_IMPLEMENTATIONGUIDES_MHD_NAME=ihe.mhd.fhir
       - HAPI_FHIR_IMPLEMENTATIONGUIDES_MHD_VERSION=4.0.1
       - HAPI_FHIR_IMPLEMENTATIONGUIDES_DDCC_URL=https://worldhealthorganization.github.io/ddcc/package.tgz
-      - HAPI_FHIR_IMPLEMENTATIONGUIDES_DDCC_NAME=fhir.who.ddcc-vs
-      - HAPI_FHIR_IMPLEMENTATIONGUIDES_DDCC_VERSION=0.3.1
+      - HAPI_FHIR_IMPLEMENTATIONGUIDES_DDCC_NAME=fhir.who.ddcc
+      - HAPI_FHIR_IMPLEMENTATIONGUIDES_DDCC_VERSION=1.0.0
     volumes:
       - type: volume
         source: instant

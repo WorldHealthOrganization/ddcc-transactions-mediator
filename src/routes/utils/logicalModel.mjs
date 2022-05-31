@@ -28,3 +28,16 @@ export const convertBundleToCoreDataSet = (bundle) => {
     })
   })
 }
+
+export const convertIPSToCoreDataSet = (bundle) => {
+  return new Promise((resolve) => {
+    transform( "IPSToCoreDataSetVS", bundle )
+    .then((transformed) => {
+      logger.info("Converted IPS to CoreDataSet")
+      resolve(transformed)
+    }).catch((err) => {
+      logger.info("Error converting IPS to CoreDataSet")
+      resolve({ error: JSON.stringify(err) })
+    })
+  })
+}
