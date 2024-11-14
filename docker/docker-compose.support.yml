@@ -7,7 +7,8 @@ services:
     environment:
       - spring.datasource.url=jdbc:postgresql://db:5432/hapi
       - spring.datasource.username=admin
-      - spring.datasource.password=instant101
+# Uncomment to set postgres password
+#      - spring.datasource.password=PASSWORD
       - spring.datasource.driverClassName=org.postgresql.Driver
       - hapi.fhir.allow_external_references=true
       - hapi.fhir.max_page_size=50
@@ -48,7 +49,8 @@ services:
     environment:
       POSTGRES_DB: 'hapi'
       POSTGRES_USER: 'admin'
-      POSTGRES_PASSWORD: 'instant101'
+# Uncomment to set postgres password
+#      POSTGRES_PASSWORD: 'PASSWORD'
     volumes:
       - 'hapi-postgres:/var/lib/postgresql'
 
